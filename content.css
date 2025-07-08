@@ -1,0 +1,374 @@
+/* YouTube Smart Filter - Content Script Styles */
+
+/* Base styles for all video containers */
+ytm-media-item,
+ytm-rich-item-renderer,
+ytm-video-with-context-renderer {
+    position: relative !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Enhanced styles for ytm-video-with-context-renderer */
+ytm-video-with-context-renderer.ysf-filtered {
+    position: relative !important;
+}
+
+/* Filtered video styles - blur all the content inside */
+.ysf-filtered .media-item-thumbnail-container,
+.ysf-filtered .media-item-thumbnail-container *,
+.ysf-filtered ytm-thumbnail-cover,
+.ysf-filtered .video-thumbnail-container-large,
+.ysf-filtered .cover,
+.ysf-filtered .video-thumbnail-img,
+.ysf-filtered .yt-core-image,
+.ysf-filtered .details,
+.ysf-filtered .media-channel,
+.ysf-filtered .ytProfileIconImage,
+.ysf-filtered ytm-profile-icon,
+.ysf-filtered .media-item-headline,
+.ysf-filtered .media-item-metadata,
+.ysf-filtered .ytm-badge-and-byline-renderer,
+.ysf-filtered .media-item-info,
+.ysf-filtered .compact-media-item-info,
+.ysf-filtered .media-item-snippet,
+.ysf-filtered .compact-media-item-snippet,
+.ysf-filtered .cbox,
+.ysf-filtered img {
+    filter: blur(4px) grayscale(95%) !important;
+    transition: filter 0.3s ease !important;
+}
+
+/* Enhanced blurring for context renderer details */
+.ysf-filtered-details,
+.ysf-filtered-details * {
+    filter: blur(4px) grayscale(95%) !important;
+    transition: filter 0.3s ease !important;
+}
+
+/* Specific targeting for media-item-thumbnail-container within ytm-video-with-context-renderer */
+ytm-video-with-context-renderer.ysf-filtered .media-item-thumbnail-container,
+ytm-video-with-context-renderer.ysf-filtered .media-item-thumbnail-container *,
+ytm-video-with-context-renderer .media-item-thumbnail-container.ysf-filtered,
+ytm-video-with-context-renderer .media-item-thumbnail-container.ysf-filtered * {
+    filter: blur(4px) grayscale(95%) !important;
+    transition: filter 0.3s ease !important;
+}
+
+/* Keep the main container unblurred so overlay stays crisp */
+.ysf-filtered {
+    filter: none !important;
+    position: relative;
+    z-index: 1000;
+}
+
+/* Filtered overlay container - covers the entire ytm-media-item */
+.ysf-filtered::after {
+    content: 'FILTERED';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    z-index: 1001;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    border-radius: 8px;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Category label styles - positioned below FILTERED text */
+.ysf-filtered::before {
+    content: attr(data-filter-category);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, calc(-50% + 40px));
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1002;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Category-specific colors for the overlay border */
+.ysf-filtered[data-filter-category="educational"]::after {
+    border: 3px solid rgba(52, 168, 83, 1);
+    box-shadow: inset 0 0 0 3px rgba(52, 168, 83, 0.3);
+}
+
+.ysf-filtered[data-filter-category="entertainment"]::after {
+    border: 3px solid rgba(234, 67, 53, 1);
+    box-shadow: inset 0 0 0 3px rgba(234, 67, 53, 0.3);
+}
+
+.ysf-filtered[data-filter-category="news"]::after {
+    border: 3px solid rgba(66, 133, 244, 1);
+    box-shadow: inset 0 0 0 3px rgba(66, 133, 244, 0.3);
+}
+
+.ysf-filtered[data-filter-category="technology"]::after {
+    border: 3px solid rgba(156, 39, 176, 1);
+    box-shadow: inset 0 0 0 3px rgba(156, 39, 176, 0.3);
+}
+
+.ysf-filtered[data-filter-category="gaming"]::after {
+    border: 3px solid rgba(255, 193, 7, 1);
+    box-shadow: inset 0 0 0 3px rgba(255, 193, 7, 0.3);
+}
+
+.ysf-filtered[data-filter-category="music"]::after {
+    border: 3px solid rgba(233, 30, 99, 1);
+    box-shadow: inset 0 0 0 3px rgba(233, 30, 99, 0.3);
+}
+
+.ysf-filtered[data-filter-category="sports"]::after {
+    border: 3px solid rgba(255, 152, 0, 1);
+    box-shadow: inset 0 0 0 3px rgba(255, 152, 0, 0.3);
+}
+
+.ysf-filtered[data-filter-category="comedy"]::after {
+    border: 3px solid rgba(121, 85, 72, 1);
+    box-shadow: inset 0 0 0 3px rgba(121, 85, 72, 0.3);
+}
+
+/* Hidden video styles - remove this since we don't want to hide videos */
+.ysf-hidden {
+    /* Remove display: none - keep videos in DOM */
+}
+
+/* Loading indicator for videos being processed */
+.ysf-processing {
+    position: relative;
+}
+
+.ysf-processing::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #667eea;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: ysf-spin 1s linear infinite;
+    z-index: 10;
+}
+
+/* Category indicator badge */
+.ysf-category-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(102, 126, 234, 0.9);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 5;
+    backdrop-filter: blur(4px);
+}
+
+/* Different colors for different categories */
+.ysf-category-badge.educational {
+    background: rgba(52, 168, 83, 0.9);
+}
+
+.ysf-category-badge.entertainment {
+    background: rgba(234, 67, 53, 0.9);
+}
+
+.ysf-category-badge.news {
+    background: rgba(66, 133, 244, 0.9);
+}
+
+.ysf-category-badge.technology {
+    background: rgba(156, 39, 176, 0.9);
+}
+
+.ysf-category-badge.gaming {
+    background: rgba(255, 193, 7, 0.9);
+    color: #333;
+}
+
+.ysf-category-badge.music {
+    background: rgba(233, 30, 99, 0.9);
+}
+
+.ysf-category-badge.sports {
+    background: rgba(255, 152, 0, 0.9);
+}
+
+.ysf-category-badge.comedy {
+    background: rgba(121, 85, 72, 0.9);
+}
+
+/* Filter notification */
+.ysf-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #333;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-size: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    animation: ysf-slideIn 0.3s ease;
+}
+
+.ysf-notification.success {
+    background: #4caf50;
+}
+
+.ysf-notification.error {
+    background: #f44336;
+}
+
+/* Statistics overlay */
+.ysf-stats-overlay {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-size: 11px;
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+}
+
+.ysf-stats-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Hover effects for non-filtered videos */
+ytd-video-renderer:not(.ysf-filtered):hover,
+ytd-grid-video-renderer:not(.ysf-filtered):hover,
+ytd-compact-video-renderer:not(.ysf-filtered):hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Loading state for the entire page */
+.ysf-page-loading {
+    position: relative;
+}
+
+.ysf-page-loading::before {
+    content: 'Smart Filter Processing...';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(102, 126, 234, 0.95);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10001;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Animations */
+@keyframes ysf-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes ysf-slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes ysf-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes ysf-scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .ysf-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        text-align: center;
+    }
+    
+    .ysf-stats-overlay {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        text-align: center;
+    }
+    
+    .ysf-category-badge {
+        top: 4px;
+        right: 4px;
+        font-size: 9px;
+        padding: 1px 4px;
+    }
+}
+
+/* Dark mode compatibility */
+@media (prefers-color-scheme: dark) {
+    .ysf-category-badge {
+        backdrop-filter: blur(8px);
+    }
+    
+    .ysf-notification {
+        box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
+    }
+} 

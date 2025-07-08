@@ -1,0 +1,49 @@
+# Icon Requirements
+
+This extension needs the following icon sizes:
+- icon16.png (16x16px) - Small icon for extension management
+- icon32.png (32x32px) - Standard icon
+- icon48.png (48x48px) - Extension management page
+- icon128.png (128x128px) - Chrome Web Store
+
+## Design Guidelines
+
+The icon should:
+- Represent video filtering/AI content analysis
+- Be recognizable at small sizes
+- Use modern, clean design
+- Consider using elements like:
+  - Filter/funnel symbol
+  - Brain/AI symbol
+  - YouTube play button style
+  - Video thumbnails with categorization
+
+## Color Suggestions
+
+Based on the extension theme:
+- Primary: #667eea (blue-purple gradient start)
+- Secondary: #764ba2 (blue-purple gradient end)
+- Accent: #51cf66 (success green)
+
+## Tools for Creation
+
+- Canva (online, free templates)
+- Figma (free, professional design)
+- GIMP (free, open source)
+- Adobe Illustrator (paid)
+- Online icon generators
+
+## Temporary Solution
+
+For development, you can:
+1. Use favicon generators online
+2. Create simple text-based icons
+3. Use emoji-style icons (🎯, 🧠, 📹)
+4. Download free icons from IconFinder, Flaticon, etc.
+
+## Example Icon Concepts
+
+1. 🎯 Target symbol with video play button
+2. 🧠 Brain icon with filter lines
+3. 📹 Video camera with AI circuit pattern
+4. Filter funnel with YouTube red accent 

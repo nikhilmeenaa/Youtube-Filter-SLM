@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Smart Filter</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 YouTube Smart Filter</h1>
+            <div class="status">
+                <span id="status-indicator" class="status-dot"></span>
+                <span id="status-text">Initializing...</span>
+            </div>
+        </header>
+
+        <main>
+            <section class="filter-section">
+                <h2>Content Categories</h2>
+                <p class="description">Select categories to show on YouTube:</p>
+                
+                <div class="categories">
+                    <label class="category-item">
+                        <input type="checkbox" id="educational" checked>
+                        <span class="checkmark"></span>
+                        <span class="category-label">📚 Educational</span>
+                    </label>
+                    
+                    <label class="category-item">
+                        <input type="checkbox" id="entertainment" checked>
+                        <span class="checkmark"></span>
+                        <span class="category-label">🎬 Entertainment</span>
+                    </label>
+                    
+                    <label class="category-item">
+                        <input type="checkbox" id="news">
+                        <span class="checkmark"></span>
+                        <span class="category-label">📰 News</span>
+                    </label>
+                    
+                    <label class="category-item">
+                        <input type="checkbox" id="technology">
+                        <span class="checkmark"></span>
+                        <span class="category-label">💻 Technology</span>
+                    </label>
+                    
+                    <label class="category-item">
+                        <input type="checkbox" id="gaming">
+                        <span class="checkmark"></span>
+                        <span class="category-label">🎮 Gaming</span>
+                    </label>
+                    
+                    <label class="category-item">
+                        <input type="checkbox" id="music">
+                        <span class="checkmark"></span>
+                        <span class="category-label">🎵 Music</span>
+                    </label>
+                    
+                    <label class="category-item">
+                        <input type="checkbox" id="sports">
+                        <span class="checkmark"></span>
+                        <span class="category-label">⚽ Sports</span>
+                    </label>
+                    
+                    <label class="category-item">
+                        <input type="checkbox" id="comedy">
+                        <span class="checkmark"></span>
+                        <span class="category-label">😂 Comedy</span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="filter-mode">
+                <h3>Filter Mode</h3>
+                <div class="mode-options">
+                    <label class="mode-item">
+                        <input type="radio" name="filterMode" value="show" checked>
+                        <span>Show only selected</span>
+                    </label>
+                    <label class="mode-item">
+                        <input type="radio" name="filterMode" value="hide">
+                        <span>Hide selected</span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="stats">
+                <h3>Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number" id="processed-count">0</span>
+                        <span class="stat-label">Videos Processed</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="filtered-count">0</span>
+                        <span class="stat-label">Videos Filtered</span>
+                    </div>
+                </div>
+            </section>
+
+            <div class="actions">
+                <button id="apply-filters" class="btn primary">Apply Filters</button>
+                <button id="reset-filters" class="btn secondary">Reset All</button>
+            </div>
+        </main>
+
+        <footer>
+            <div class="model-info">
+                <span id="model-status">Loading AI model...</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html> 
