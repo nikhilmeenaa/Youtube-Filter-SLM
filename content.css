@@ -1,374 +1,381 @@
-/* YouTube Smart Filter - Content Script Styles */
+/* YouTube Smart Filter - Simple Content Filtering */
 
-/* Base styles for all video containers */
-ytm-media-item,
-ytm-rich-item-renderer,
-ytm-video-with-context-renderer {
+/* Target specific YouTube video content containers */
+#content.style-scope.ytd-rich-item-renderer.ysf-filtered {
+    filter: blur(2px) grayscale(60%) !important;
+    opacity: 0.7 !important;
     position: relative !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    pointer-events: none !important;
+    transition: all 0.3s ease !important;
 }
 
-/* Enhanced styles for ytm-video-with-context-renderer */
-ytm-video-with-context-renderer.ysf-filtered {
+/* Category overlay - separate element, completely unblurred */
+.ysf-category-overlay {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: rgba(2, 132, 199, 0.95) !important;
+    color: white !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
+    z-index: 1000 !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    pointer-events: none !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    text-transform: uppercase !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+}
+
+/* Category-specific overlay colors */
+.ysf-category-overlay[data-category="safety"] {
+    background: rgba(220, 38, 38, 0.95) !important;
+}
+
+.ysf-category-overlay[data-category="entertainment"] {
+    background: rgba(147, 51, 234, 0.95) !important;
+}
+
+.ysf-category-overlay[data-category="educational"] {
+    background: rgba(59, 130, 246, 0.95) !important;
+}
+
+.ysf-category-overlay[data-category="lifestyle"] {
+    background: rgba(236, 72, 153, 0.95) !important;
+}
+
+.ysf-category-overlay[data-category="outdoor"] {
+    background: rgba(34, 197, 94, 0.95) !important;
+}
+
+.ysf-category-overlay[data-category="specialized"] {
+    background: rgba(249, 115, 22, 0.95) !important;
+}
+
+/* Popup styles */
+.ysf-popup {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 640px !important;
+    height: 800px !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    z-index: 10000 !important;
+    border: 1px solid #e2e8f0 !important;
+    overflow: hidden !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.ysf-popup-header {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    color: white !important;
+    padding: 24px !important;
+    text-align: center !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
     position: relative !important;
+    overflow: hidden !important;
 }
 
-/* Filtered video styles - blur all the content inside */
-.ysf-filtered .media-item-thumbnail-container,
-.ysf-filtered .media-item-thumbnail-container *,
-.ysf-filtered ytm-thumbnail-cover,
-.ysf-filtered .video-thumbnail-container-large,
-.ysf-filtered .cover,
-.ysf-filtered .video-thumbnail-img,
-.ysf-filtered .yt-core-image,
-.ysf-filtered .details,
-.ysf-filtered .media-channel,
-.ysf-filtered .ytProfileIconImage,
-.ysf-filtered ytm-profile-icon,
-.ysf-filtered .media-item-headline,
-.ysf-filtered .media-item-metadata,
-.ysf-filtered .ytm-badge-and-byline-renderer,
-.ysf-filtered .media-item-info,
-.ysf-filtered .compact-media-item-info,
-.ysf-filtered .media-item-snippet,
-.ysf-filtered .compact-media-item-snippet,
-.ysf-filtered .cbox,
-.ysf-filtered img {
-    filter: blur(4px) grayscale(95%) !important;
-    transition: filter 0.3s ease !important;
+.ysf-popup-header::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%) !important;
+    pointer-events: none !important;
 }
 
-/* Enhanced blurring for context renderer details */
-.ysf-filtered-details,
-.ysf-filtered-details * {
-    filter: blur(4px) grayscale(95%) !important;
-    transition: filter 0.3s ease !important;
+.ysf-popup-title {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    margin: 0 0 8px 0 !important;
+    position: relative !important;
+    z-index: 1 !important;
 }
 
-/* Specific targeting for media-item-thumbnail-container within ytm-video-with-context-renderer */
-ytm-video-with-context-renderer.ysf-filtered .media-item-thumbnail-container,
-ytm-video-with-context-renderer.ysf-filtered .media-item-thumbnail-container *,
-ytm-video-with-context-renderer .media-item-thumbnail-container.ysf-filtered,
-ytm-video-with-context-renderer .media-item-thumbnail-container.ysf-filtered * {
-    filter: blur(4px) grayscale(95%) !important;
-    transition: filter 0.3s ease !important;
+.ysf-popup-subtitle {
+    font-size: 14px !important;
+    opacity: 0.9 !important;
+    margin: 0 !important;
+    position: relative !important;
+    z-index: 1 !important;
 }
 
-/* Keep the main container unblurred so overlay stays crisp */
-.ysf-filtered {
-    filter: none !important;
-    position: relative;
-    z-index: 1000;
+.ysf-status-bar {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 16px 24px !important;
+    background: rgba(248, 250, 252, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
 }
 
-/* Filtered overlay container - covers the entire ytm-media-item */
-.ysf-filtered::after {
-    content: 'FILTERED';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 20px;
-    font-weight: bold;
-    text-align: center;
-    z-index: 1001;
-    pointer-events: none;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    border-radius: 8px;
-    filter: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
+.ysf-mode-toggle {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    background: white !important;
+    padding: 8px 16px !important;
+    border-radius: 12px !important;
+    border: 2px solid #0284c7 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Category label styles - positioned below FILTERED text */
-.ysf-filtered::before {
-    content: attr(data-filter-category);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, calc(-50% + 40px));
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 14px;
-    font-weight: 500;
-    z-index: 1002;
-    pointer-events: none;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    white-space: nowrap;
-    filter: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+.ysf-mode-toggle:hover {
+    background: #f0f9ff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Category-specific colors for the overlay border */
-.ysf-filtered[data-filter-category="educational"]::after {
-    border: 3px solid rgba(52, 168, 83, 1);
-    box-shadow: inset 0 0 0 3px rgba(52, 168, 83, 0.3);
+.ysf-toggle-switch {
+    position: relative !important;
+    width: 48px !important;
+    height: 24px !important;
+    background: #cbd5e1 !important;
+    border-radius: 12px !important;
+    transition: background 0.3s ease !important;
 }
 
-.ysf-filtered[data-filter-category="entertainment"]::after {
-    border: 3px solid rgba(234, 67, 53, 1);
-    box-shadow: inset 0 0 0 3px rgba(234, 67, 53, 0.3);
+.ysf-toggle-switch.active {
+    background: #0284c7 !important;
 }
 
-.ysf-filtered[data-filter-category="news"]::after {
-    border: 3px solid rgba(66, 133, 244, 1);
-    box-shadow: inset 0 0 0 3px rgba(66, 133, 244, 0.3);
+.ysf-toggle-knob {
+    position: absolute !important;
+    top: 2px !important;
+    left: 2px !important;
+    width: 20px !important;
+    height: 20px !important;
+    background: white !important;
+    border-radius: 50% !important;
+    transition: transform 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
-.ysf-filtered[data-filter-category="technology"]::after {
-    border: 3px solid rgba(156, 39, 176, 1);
-    box-shadow: inset 0 0 0 3px rgba(156, 39, 176, 0.3);
+.ysf-toggle-switch.active .ysf-toggle-knob {
+    transform: translateX(24px) !important;
 }
 
-.ysf-filtered[data-filter-category="gaming"]::after {
-    border: 3px solid rgba(255, 193, 7, 1);
-    box-shadow: inset 0 0 0 3px rgba(255, 193, 7, 0.3);
+.ysf-mode-labels {
+    display: flex !important;
+    flex-direction: column !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
 }
 
-.ysf-filtered[data-filter-category="music"]::after {
-    border: 3px solid rgba(233, 30, 99, 1);
-    box-shadow: inset 0 0 0 3px rgba(233, 30, 99, 0.3);
+.ysf-mode-label {
+    color: #64748b !important;
+    transition: color 0.2s ease !important;
 }
 
-.ysf-filtered[data-filter-category="sports"]::after {
-    border: 3px solid rgba(255, 152, 0, 1);
-    box-shadow: inset 0 0 0 3px rgba(255, 152, 0, 0.3);
+.ysf-mode-label.active {
+    color: #0284c7 !important;
 }
 
-.ysf-filtered[data-filter-category="comedy"]::after {
-    border: 3px solid rgba(121, 85, 72, 1);
-    box-shadow: inset 0 0 0 3px rgba(121, 85, 72, 0.3);
+.ysf-stats {
+    font-size: 12px !important;
+    color: #64748b !important;
+    background: white !important;
+    padding: 8px 16px !important;
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
 }
 
-/* Hidden video styles - remove this since we don't want to hide videos */
-.ysf-hidden {
-    /* Remove display: none - keep videos in DOM */
+.ysf-popup-content {
+    padding: 24px !important;
+    height: calc(100% - 180px) !important;
+    overflow-y: auto !important;
 }
 
-/* Loading indicator for videos being processed */
-.ysf-processing {
-    position: relative;
+.ysf-popup-content::-webkit-scrollbar {
+    width: 8px !important;
 }
 
-.ysf-processing::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid #667eea;
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: ysf-spin 1s linear infinite;
-    z-index: 10;
+.ysf-popup-content::-webkit-scrollbar-track {
+    background: #f1f5f9 !important;
+    border-radius: 4px !important;
 }
 
-/* Category indicator badge */
-.ysf-category-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: rgba(102, 126, 234, 0.9);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    z-index: 5;
-    backdrop-filter: blur(4px);
+.ysf-popup-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1 !important;
+    border-radius: 4px !important;
 }
 
-/* Different colors for different categories */
-.ysf-category-badge.educational {
-    background: rgba(52, 168, 83, 0.9);
+.ysf-popup-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8 !important;
 }
 
-.ysf-category-badge.entertainment {
-    background: rgba(234, 67, 53, 0.9);
+.ysf-category {
+    margin-bottom: 24px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid #e2e8f0 !important;
+    overflow: hidden !important;
 }
 
-.ysf-category-badge.news {
-    background: rgba(66, 133, 244, 0.9);
+.ysf-category-header {
+    padding: 16px 20px !important;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
 }
 
-.ysf-category-badge.technology {
-    background: rgba(156, 39, 176, 0.9);
+.ysf-category-header:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
 }
 
-.ysf-category-badge.gaming {
-    background: rgba(255, 193, 7, 0.9);
-    color: #333;
+.ysf-category-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
 }
 
-.ysf-category-badge.music {
-    background: rgba(233, 30, 99, 0.9);
+.ysf-category-toggle {
+    font-size: 18px !important;
+    color: #0284c7 !important;
+    transition: transform 0.2s ease !important;
 }
 
-.ysf-category-badge.sports {
-    background: rgba(255, 152, 0, 0.9);
+.ysf-category.collapsed .ysf-category-toggle {
+    transform: rotate(-90deg) !important;
 }
 
-.ysf-category-badge.comedy {
-    background: rgba(121, 85, 72, 0.9);
+.ysf-category-content {
+    padding: 20px !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    gap: 12px !important;
 }
 
-/* Filter notification */
-.ysf-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #333;
-    color: white;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    font-size: 14px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 10000;
-    animation: ysf-slideIn 0.3s ease;
+.ysf-category.collapsed .ysf-category-content {
+    display: none !important;
 }
 
-.ysf-notification.success {
-    background: #4caf50;
+.ysf-filter-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+    background: #f8fafc !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
 }
 
-.ysf-notification.error {
-    background: #f44336;
+.ysf-filter-item:hover {
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    transform: translateY(-1px) !important;
 }
 
-/* Statistics overlay */
-.ysf-stats-overlay {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    font-size: 11px;
-    backdrop-filter: blur(4px);
-    z-index: 9999;
-    transition: opacity 0.3s ease;
+.ysf-filter-item.active {
+    background: #eff6ff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1) !important;
 }
 
-.ysf-stats-overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
+.ysf-filter-checkbox {
+    width: 18px !important;
+    height: 18px !important;
+    border: 2px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    background: white !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
 }
 
-/* Hover effects for non-filtered videos */
-ytd-video-renderer:not(.ysf-filtered):hover,
-ytd-grid-video-renderer:not(.ysf-filtered):hover,
-ytd-compact-video-renderer:not(.ysf-filtered):hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+.ysf-filter-checkbox.checked {
+    background: #0284c7 !important;
+    border-color: #0284c7 !important;
 }
 
-/* Loading state for the entire page */
-.ysf-page-loading {
-    position: relative;
+.ysf-filter-checkbox.checked::after {
+    content: '✓' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    color: white !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
 }
 
-.ysf-page-loading::before {
-    content: 'Smart Filter Processing...';
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(102, 126, 234, 0.95);
-    color: white;
-    padding: 16px 24px;
-    border-radius: 8px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    z-index: 10001;
-    backdrop-filter: blur(4px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+.ysf-filter-label {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+    cursor: pointer !important;
+    flex: 1 !important;
 }
 
-/* Animations */
-@keyframes ysf-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.ysf-filter-item.active .ysf-filter-label {
+    color: #0284c7 !important;
 }
 
-@keyframes ysf-slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+.ysf-popup-footer {
+    padding: 20px 24px !important;
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+    display: flex !important;
+    gap: 12px !important;
+    justify-content: flex-end !important;
 }
 
-@keyframes ysf-fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.ysf-btn {
+    padding: 12px 24px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
+    font-family: inherit !important;
 }
 
-@keyframes ysf-scaleIn {
-    from {
-        transform: scale(0.9);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
+.ysf-btn-primary {
+    background: #0284c7 !important;
+    color: white !important;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .ysf-notification {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-        text-align: center;
-    }
-    
-    .ysf-stats-overlay {
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
-        text-align: center;
-    }
-    
-    .ysf-category-badge {
-        top: 4px;
-        right: 4px;
-        font-size: 9px;
-        padding: 1px 4px;
-    }
+.ysf-btn-primary:hover {
+    background: #0369a1 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(2, 132, 199, 0.3) !important;
 }
 
-/* Dark mode compatibility */
-@media (prefers-color-scheme: dark) {
-    .ysf-category-badge {
-        backdrop-filter: blur(8px);
-    }
-    
-    .ysf-notification {
-        box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
-    }
+.ysf-btn-secondary {
+    background: #f1f5f9 !important;
+    color: #374151 !important;
+    border: 1px solid #d1d5db !important;
+}
+
+.ysf-btn-secondary:hover {
+    background: #e2e8f0 !important;
+    transform: translateY(-1px) !important;
 } 
