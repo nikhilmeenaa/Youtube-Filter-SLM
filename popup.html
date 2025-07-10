@@ -17,75 +17,281 @@
         </header>
 
         <main>
-            <section class="filter-section">
-                <h2>Content Categories</h2>
-                <p class="description">Select categories to show on YouTube:</p>
+            <!-- Quick Actions -->
+            <section class="quick-actions">
+                <div class="toggle-group">
+                    <button id="select-all" class="quick-btn">Select All</button>
+                    <button id="clear-all" class="quick-btn">Clear All</button>
+                </div>
                 
-                <div class="categories">
-                    <label class="category-item">
-                        <input type="checkbox" id="educational" checked>
-                        <span class="checkmark"></span>
-                        <span class="category-label">📚 Educational</span>
-                    </label>
-                    
-                    <label class="category-item">
-                        <input type="checkbox" id="entertainment" checked>
-                        <span class="checkmark"></span>
-                        <span class="category-label">🎬 Entertainment</span>
-                    </label>
-                    
-                    <label class="category-item">
-                        <input type="checkbox" id="news">
-                        <span class="checkmark"></span>
-                        <span class="category-label">📰 News</span>
-                    </label>
-                    
-                    <label class="category-item">
-                        <input type="checkbox" id="technology">
-                        <span class="checkmark"></span>
-                        <span class="category-label">💻 Technology</span>
-                    </label>
-                    
-                    <label class="category-item">
-                        <input type="checkbox" id="gaming">
-                        <span class="checkmark"></span>
-                        <span class="category-label">🎮 Gaming</span>
-                    </label>
-                    
-                    <label class="category-item">
-                        <input type="checkbox" id="music">
-                        <span class="checkmark"></span>
-                        <span class="category-label">🎵 Music</span>
-                    </label>
-                    
-                    <label class="category-item">
-                        <input type="checkbox" id="sports">
-                        <span class="checkmark"></span>
-                        <span class="category-label">⚽ Sports</span>
-                    </label>
-                    
-                    <label class="category-item">
-                        <input type="checkbox" id="comedy">
-                        <span class="checkmark"></span>
-                        <span class="category-label">😂 Comedy</span>
-                    </label>
+                <!-- Filter Mode Toggle -->
+                <div class="filter-mode">
+                    <span class="mode-description">Filter Mode:</span>
+                    <div class="mode-toggle-container">
+                        <label class="mode-toggle">
+                            <input type="checkbox" id="hide-mode">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="mode-labels">
+                            <span class="mode-label active" id="show-label">🎯 Show Only Selected</span>
+                            <span class="mode-label" id="hide-label">🚫 Hide Selected</span>
+                        </div>
+                    </div>
+                    <div class="mode-help">
+                        <span id="mode-help-text">Only videos from selected categories will be shown</span>
+                    </div>
                 </div>
             </section>
 
-            <section class="filter-mode">
-                <h3>Filter Mode</h3>
-                <div class="mode-options">
-                    <label class="mode-item">
-                        <input type="radio" name="filterMode" value="show" checked>
-                        <span>Show only selected</span>
-                    </label>
-                    <label class="mode-item">
-                        <input type="radio" name="filterMode" value="hide">
-                        <span>Hide selected</span>
-                    </label>
+            <!-- Major Categories -->
+            <section class="filter-categories">
+                <h2>Major Categories</h2>
+                
+                <!-- Content Type & Safety -->
+                <div class="category-group">
+                    <div class="category-header" data-category="safety">
+                        <div class="category-toggle">
+                            <input type="checkbox" id="safety-all" class="category-checkbox">
+                            <span class="category-title">🛡️ Content & Safety</span>
+                        </div>
+                        <button class="expand-btn" data-target="safety-filters">
+                            <svg class="chevron" viewBox="0 0 24 24">
+                                <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="filter-list collapsed" id="safety-filters">
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="adult-content">
+                            <span class="filter-label">🔞 Adult Content</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="violence">
+                            <span class="filter-label">⚔️ Violence</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="politics">
+                            <span class="filter-label">🏛️ Politics</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="news">
+                            <span class="filter-label">📰 News</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="religion">
+                            <span class="filter-label">⛪ Religion</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Entertainment & Lifestyle -->
+                <div class="category-group">
+                    <div class="category-header" data-category="entertainment">
+                        <div class="category-toggle">
+                            <input type="checkbox" id="entertainment-all" class="category-checkbox">
+                            <span class="category-title">🎬 Entertainment & Lifestyle</span>
+                        </div>
+                        <button class="expand-btn" data-target="entertainment-filters">
+                            <svg class="chevron" viewBox="0 0 24 24">
+                                <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="filter-list collapsed" id="entertainment-filters">
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="gaming">
+                            <span class="filter-label">🎮 Gaming</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="music">
+                            <span class="filter-label">🎵 Music</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="movies-tv">
+                            <span class="filter-label">📺 Movies & TV</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="sports">
+                            <span class="filter-label">⚽ Sports</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="comedy">
+                            <span class="filter-label">😂 Comedy</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="beauty-fashion">
+                            <span class="filter-label">💄 Beauty & Fashion</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="food-cooking">
+                            <span class="filter-label">🍳 Food & Cooking</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="travel">
+                            <span class="filter-label">✈️ Travel</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Educational & Professional -->
+                <div class="category-group">
+                    <div class="category-header" data-category="educational">
+                        <div class="category-toggle">
+                            <input type="checkbox" id="educational-all" class="category-checkbox">
+                            <span class="category-title">📚 Educational & Professional</span>
+                        </div>
+                        <button class="expand-btn" data-target="educational-filters">
+                            <svg class="chevron" viewBox="0 0 24 24">
+                                <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="filter-list collapsed" id="educational-filters">
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="educational">
+                            <span class="filter-label">🎓 Educational</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="technology">
+                            <span class="filter-label">💻 Technology</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="business">
+                            <span class="filter-label">💼 Business</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="health-fitness">
+                            <span class="filter-label">💪 Health & Fitness</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="science">
+                            <span class="filter-label">🔬 Science</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="diy-crafts">
+                            <span class="filter-label">🔨 DIY & Crafts</span>
+                        </label>
+                    </div>
                 </div>
             </section>
 
+            <!-- Niche Categories -->
+            <section class="filter-categories niche">
+                <h2>Niche Categories</h2>
+                
+                <!-- Lifestyle & Hobbies -->
+                <div class="category-group">
+                    <div class="category-header" data-category="lifestyle">
+                        <div class="category-toggle">
+                            <input type="checkbox" id="lifestyle-all" class="category-checkbox">
+                            <span class="category-title">🏡 Lifestyle & Hobbies</span>
+                        </div>
+                        <button class="expand-btn" data-target="lifestyle-filters">
+                            <svg class="chevron" viewBox="0 0 24 24">
+                                <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="filter-list collapsed" id="lifestyle-filters">
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="dating-relationships">
+                            <span class="filter-label">💕 Dating & Relationships</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="asmr">
+                            <span class="filter-label">🎧 ASMR</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="meditation">
+                            <span class="filter-label">🧘 Meditation & Mindfulness</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="conspiracy">
+                            <span class="filter-label">🕵️ Conspiracy Theories</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="true-crime">
+                            <span class="filter-label">🔍 True Crime</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Outdoor & Adventure -->
+                <div class="category-group">
+                    <div class="category-header" data-category="outdoor">
+                        <div class="category-toggle">
+                            <input type="checkbox" id="outdoor-all" class="category-checkbox">
+                            <span class="category-title">🏔️ Outdoor & Adventure</span>
+                        </div>
+                        <button class="expand-btn" data-target="outdoor-filters">
+                            <svg class="chevron" viewBox="0 0 24 24">
+                                <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="filter-list collapsed" id="outdoor-filters">
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="hiking-outdoors">
+                            <span class="filter-label">🥾 Hiking & Outdoors</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="adventure-sports">
+                            <span class="filter-label">🏄 Adventure Sports</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="hunting-fishing">
+                            <span class="filter-label">🎣 Hunting & Fishing</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="automotive">
+                            <span class="filter-label">🚗 Automotive</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="aviation">
+                            <span class="filter-label">✈️ Aviation</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Specialized Topics -->
+                <div class="category-group">
+                    <div class="category-header" data-category="specialized">
+                        <div class="category-toggle">
+                            <input type="checkbox" id="specialized-all" class="category-checkbox">
+                            <span class="category-title">🎯 Specialized Topics</span>
+                        </div>
+                        <button class="expand-btn" data-target="specialized-filters">
+                            <svg class="chevron" viewBox="0 0 24 24">
+                                <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="filter-list collapsed" id="specialized-filters">
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="geopolitics">
+                            <span class="filter-label">🌍 Geopolitics</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="cryptocurrency">
+                            <span class="filter-label">₿ Cryptocurrency</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="paranormal">
+                            <span class="filter-label">👻 Paranormal</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="minimalism">
+                            <span class="filter-label">🎋 Minimalism</span>
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" data-filter="prepping">
+                            <span class="filter-label">🎒 Prepping/Survival</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Statistics -->
             <section class="stats">
                 <h3>Statistics</h3>
                 <div class="stats-grid">
@@ -96,6 +302,14 @@
                     <div class="stat-item">
                         <span class="stat-number" id="filtered-count">0</span>
                         <span class="stat-label">Videos Filtered</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="active-filters">0</span>
+                        <span class="stat-label">Active Filters</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="accuracy-rate">--</span>
+                        <span class="stat-label">Accuracy</span>
                     </div>
                 </div>
             </section>

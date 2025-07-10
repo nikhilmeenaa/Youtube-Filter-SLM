@@ -1,23 +1,67 @@
-// YouTube Smart Filter - Popup Script
-class PopupController {
+// YouTube Smart Filter - Enhanced Popup Script
+class EnhancedPopupController {
     constructor() {
         this.filterSettings = {
-            categories: {
-                educational: true,
-                entertainment: true,
-                news: false,
-                technology: false,
-                gaming: false,
-                music: false,
-                sports: false,
-                comedy: false
+            // Major Categories
+            safety: {
+                'adult-content': false,
+                'violence': false,
+                'politics': false,
+                'news': false,
+                'religion': false
             },
-            mode: 'show' // 'show' or 'hide'
+            entertainment: {
+                'gaming': false,
+                'music': false,
+                'movies-tv': false,
+                'sports': false,
+                'comedy': false,
+                'beauty-fashion': false,
+                'food-cooking': false,
+                'travel': false
+            },
+            educational: {
+                'educational': false,
+                'technology': false,
+                'business': false,
+                'health-fitness': false,
+                'science': false,
+                'diy-crafts': false
+            },
+            // Niche Categories
+            lifestyle: {
+                'dating-relationships': false,
+                'asmr': false,
+                'meditation': false,
+                'conspiracy': false,
+                'true-crime': false
+            },
+            outdoor: {
+                'hiking-outdoors': false,
+                'adventure-sports': false,
+                'hunting-fishing': false,
+                'automotive': false,
+                'aviation': false
+            },
+            specialized: {
+                'geopolitics': false,
+                'cryptocurrency': false,
+                'paranormal': false,
+                'minimalism': false,
+                'prepping': false
+            },
+            mode: 'show', // 'show' or 'hide'
+            hideMode: false // New toggle for hide mode
         };
+        
         this.stats = {
             processed: 0,
-            filtered: 0
+            filtered: 0,
+            activeFilters: 0,
+            accuracy: 0
         };
+        
+        this.expandedCategories = new Set();
         this.init();
     }
 
@@ -27,44 +71,55 @@ class PopupController {
         this.updateUI();
         this.checkExtensionStatus();
         this.loadStats();
+        this.updateActiveFiltersCount();
     }
 
     async loadSettings() {
         try {
-            const result = await chrome.storage.local.get(['filterSettings']);
+            const result = await chrome.storage.local.get(['filterSettings', 'expandedCategories']);
             if (result.filterSettings) {
-                this.filterSettings = { ...this.filterSettings, ...result.filterSettings };
+                this.filterSettings = this.mergeSettings(this.filterSettings, result.filterSettings);
+            }
+            if (result.expandedCategories) {
+                this.expandedCategories = new Set(result.expandedCategories);
             }
         } catch (error) {
             console.error('Error loading settings:', error);
         }
     }
 
+    mergeSettings(defaultSettings, savedSettings) {
+        const merged = { ...defaultSettings };
+        
+        // Merge category settings
+        Object.keys(defaultSettings).forEach(category => {
+            if (typeof defaultSettings[category] === 'object' && savedSettings[category]) {
+                merged[category] = { ...defaultSettings[category], ...savedSettings[category] };
+            } else if (savedSettings[category] !== undefined) {
+                merged[category] = savedSettings[category];
+            }
+        });
+        
+        return merged;
+    }
+
     async saveSettings() {
         try {
-            await chrome.storage.local.set({ filterSettings: this.filterSettings });
-            // Notify content script about changes
+            await chrome.storage.local.set({ 
+                filterSettings: this.filterSettings,
+                expandedCategories: Array.from(this.expandedCategories)
+            });
+            
+            // Notify content script
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tabs[0] && tabs[0].url.includes('youtube.com')) {
                 try {
-                    const response = await new Promise((resolve, reject) => {
-                        chrome.tabs.sendMessage(tabs[0].id, {
-                            type: 'SETTINGS_UPDATED',
-                            settings: this.filterSettings
-                        }, (response) => {
-                            if (chrome.runtime.lastError) {
-                                reject(new Error(chrome.runtime.lastError.message));
-                            } else {
-                                resolve(response);
-                            }
-                        });
+                    await this.sendMessageToTab(tabs[0].id, {
+                        type: 'SETTINGS_UPDATED',
+                        settings: this.filterSettings
                     });
-                    
-                    if (response && response.success) {
-                        console.log('⚙️ Settings updated successfully');
-                    }
                 } catch (error) {
-                    console.error('Error notifying content script about settings:', error);
+                    console.error('Error notifying content script:', error);
                 }
             }
         } catch (error) {
@@ -76,7 +131,7 @@ class PopupController {
         try {
             const result = await chrome.storage.local.get(['filterStats']);
             if (result.filterStats) {
-                this.stats = result.filterStats;
+                this.stats = { ...this.stats, ...result.filterStats };
                 this.updateStats();
             }
         } catch (error) {
@@ -85,26 +140,85 @@ class PopupController {
     }
 
     setupEventListeners() {
-        // Category checkboxes
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
+        this.setupQuickActions();
+        this.setupCategoryExpansion();
+        this.setupFilterToggles();
+        this.setupCategoryToggles();
+        this.setupActionButtons();
+        this.setupMessageListener();
+    }
+
+    setupQuickActions() {
+        // Select All button
+        document.getElementById('select-all').addEventListener('click', () => {
+            this.selectAllFilters(true);
+        });
+
+        // Clear All button
+        document.getElementById('clear-all').addEventListener('click', () => {
+            this.selectAllFilters(false);
+        });
+
+        // Hide mode toggle
+        document.getElementById('hide-mode').addEventListener('change', (e) => {
+            this.filterSettings.hideMode = e.target.checked;
+            this.updateModeLabels();
+            this.saveSettings();
+        });
+    }
+
+    setupCategoryExpansion() {
+        const expandButtons = document.querySelectorAll('.expand-btn');
+        expandButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const targetId = button.dataset.target;
+                this.toggleCategory(targetId, button);
+            });
+        });
+
+        const categoryHeaders = document.querySelectorAll('.category-header');
+        categoryHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const expandBtn = header.querySelector('.expand-btn');
+                const targetId = expandBtn.dataset.target;
+                this.toggleCategory(targetId, expandBtn);
+            });
+        });
+    }
+
+    setupFilterToggles() {
+        const filterCheckboxes = document.querySelectorAll('.filter-item input[type="checkbox"]');
+        filterCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
-                this.filterSettings.categories[e.target.id] = e.target.checked;
-                this.saveSettings();
-                this.updateFilterCount();
+                const filter = e.target.dataset.filter;
+                const category = this.findCategoryForFilter(filter);
+                
+                if (category) {
+                    this.filterSettings[category][filter] = e.target.checked;
+                    this.updateCategoryCheckbox(category);
+                    this.updateActiveFiltersCount();
+                    this.saveSettings();
+                }
             });
         });
+    }
 
-        // Filter mode radio buttons
-        const radioButtons = document.querySelectorAll('input[name="filterMode"]');
-        radioButtons.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                this.filterSettings.mode = e.target.value;
+    setupCategoryToggles() {
+        const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
+        categoryCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const categoryId = checkbox.id.replace('-all', '');
+                const isChecked = e.target.checked;
+                
+                this.toggleCategoryFilters(categoryId, isChecked);
+                this.updateActiveFiltersCount();
                 this.saveSettings();
             });
         });
+    }
 
-        // Action buttons
+    setupActionButtons() {
         document.getElementById('apply-filters').addEventListener('click', () => {
             this.applyFilters();
         });
@@ -112,11 +226,12 @@ class PopupController {
         document.getElementById('reset-filters').addEventListener('click', () => {
             this.resetFilters();
         });
+    }
 
-        // Listen for messages from content script
+    setupMessageListener() {
         chrome.runtime.onMessage.addListener((message) => {
             if (message.type === 'STATS_UPDATE') {
-                this.stats = message.stats;
+                this.stats = { ...this.stats, ...message.stats };
                 this.updateStats();
             } else if (message.type === 'MODEL_STATUS') {
                 this.updateModelStatus(message.status);
@@ -124,33 +239,153 @@ class PopupController {
         });
     }
 
+    toggleCategory(targetId, button) {
+        const filterList = document.getElementById(targetId);
+        const isExpanded = this.expandedCategories.has(targetId);
+        
+        if (isExpanded) {
+            filterList.classList.remove('expanded');
+            filterList.classList.add('collapsed');
+            button.classList.remove('expanded');
+            this.expandedCategories.delete(targetId);
+        } else {
+            filterList.classList.remove('collapsed');
+            filterList.classList.add('expanded');
+            button.classList.add('expanded');
+            this.expandedCategories.add(targetId);
+        }
+        
+        // Save expanded state
+        chrome.storage.local.set({ expandedCategories: Array.from(this.expandedCategories) });
+    }
+
+    findCategoryForFilter(filter) {
+        for (const [category, filters] of Object.entries(this.filterSettings)) {
+            if (typeof filters === 'object' && filters.hasOwnProperty(filter)) {
+                return category;
+            }
+        }
+        return null;
+    }
+
+    toggleCategoryFilters(category, isChecked) {
+        if (this.filterSettings[category]) {
+            Object.keys(this.filterSettings[category]).forEach(filter => {
+                this.filterSettings[category][filter] = isChecked;
+                
+                // Update individual filter checkboxes
+                const checkbox = document.querySelector(`input[data-filter="${filter}"]`);
+                if (checkbox) {
+                    checkbox.checked = isChecked;
+                }
+            });
+        }
+    }
+
+    updateCategoryCheckbox(category) {
+        const categoryCheckbox = document.getElementById(`${category}-all`);
+        if (categoryCheckbox && this.filterSettings[category]) {
+            const filters = Object.values(this.filterSettings[category]);
+            const allChecked = filters.every(Boolean);
+            const someChecked = filters.some(Boolean);
+            
+            categoryCheckbox.checked = allChecked;
+            categoryCheckbox.indeterminate = someChecked && !allChecked;
+        }
+    }
+
+    selectAllFilters(select) {
+        Object.keys(this.filterSettings).forEach(category => {
+            if (typeof this.filterSettings[category] === 'object') {
+                this.toggleCategoryFilters(category, select);
+                this.updateCategoryCheckbox(category);
+            }
+        });
+        this.updateActiveFiltersCount();
+        this.saveSettings();
+    }
+
     updateUI() {
-        // Update checkboxes
-        Object.keys(this.filterSettings.categories).forEach(category => {
-            const checkbox = document.getElementById(category);
-            if (checkbox) {
-                checkbox.checked = this.filterSettings.categories[category];
+        // Update filter checkboxes
+        Object.keys(this.filterSettings).forEach(category => {
+            if (typeof this.filterSettings[category] === 'object') {
+                Object.keys(this.filterSettings[category]).forEach(filter => {
+                    const checkbox = document.querySelector(`input[data-filter="${filter}"]`);
+                    if (checkbox) {
+                        checkbox.checked = this.filterSettings[category][filter];
+                    }
+                });
+                this.updateCategoryCheckbox(category);
             }
         });
 
-        // Update radio buttons
-        document.querySelector(`input[value="${this.filterSettings.mode}"]`).checked = true;
+        // Update hide mode toggle
+        document.getElementById('hide-mode').checked = this.filterSettings.hideMode;
         
-        this.updateFilterCount();
+        // Update mode labels
+        this.updateModeLabels();
+
+        // Restore expanded categories
+        this.expandedCategories.forEach(categoryId => {
+            const filterList = document.getElementById(categoryId);
+            const button = document.querySelector(`[data-target="${categoryId}"]`);
+            if (filterList && button) {
+                filterList.classList.add('expanded');
+                filterList.classList.remove('collapsed');
+                button.classList.add('expanded');
+            }
+        });
     }
 
-    updateFilterCount() {
-        const selectedCount = Object.values(this.filterSettings.categories).filter(Boolean).length;
-        const totalCount = Object.keys(this.filterSettings.categories).length;
+    updateModeLabels() {
+        const showLabel = document.getElementById('show-label');
+        const hideLabel = document.getElementById('hide-label');
+        const helpText = document.getElementById('mode-help-text');
+
+        if (this.filterSettings.hideMode) {
+            // Hide mode is ON
+            showLabel.classList.remove('active');
+            hideLabel.classList.add('active');
+            if (helpText) {
+                helpText.textContent = 'Selected categories will be hidden from view';
+            }
+        } else {
+            // Show mode is ON (default)
+            showLabel.classList.add('active');
+            hideLabel.classList.remove('active');
+            if (helpText) {
+                helpText.textContent = 'Only videos from selected categories will be shown';
+            }
+        }
+    }
+
+    updateActiveFiltersCount() {
+        let count = 0;
+        Object.keys(this.filterSettings).forEach(category => {
+            if (typeof this.filterSettings[category] === 'object') {
+                count += Object.values(this.filterSettings[category]).filter(Boolean).length;
+            }
+        });
         
-        // Update button text to show active filters
+        this.stats.activeFilters = count;
+        document.getElementById('active-filters').textContent = count;
+        
+        // Update apply button text
         const applyButton = document.getElementById('apply-filters');
-        applyButton.textContent = `Apply Filters (${selectedCount}/${totalCount})`;
+        applyButton.textContent = count > 0 ? `Apply ${count} Filters` : 'Apply Filters';
     }
 
     updateStats() {
-        document.getElementById('processed-count').textContent = this.stats.processed;
-        document.getElementById('filtered-count').textContent = this.stats.filtered;
+        document.getElementById('processed-count').textContent = this.stats.processed || 0;
+        document.getElementById('filtered-count').textContent = this.stats.filtered || 0;
+        document.getElementById('active-filters').textContent = this.stats.activeFilters || 0;
+        
+        if (this.stats.processed > 0) {
+            const accuracy = Math.round((this.stats.filtered / this.stats.processed) * 100);
+            document.getElementById('accuracy-rate').textContent = `${accuracy}%`;
+        } else {
+            document.getElementById('accuracy-rate').textContent = '--';
+        }
     }
 
     updateModelStatus(status) {
@@ -160,22 +395,22 @@ class PopupController {
         
         switch (status) {
             case 'loading':
-                statusElement.textContent = 'Loading classifier...';
+                statusElement.textContent = 'Loading AI classifier...';
                 statusText.textContent = 'Initializing...';
                 statusIndicator.className = 'status-dot';
                 break;
             case 'ready':
-                statusElement.textContent = 'Keyword classifier ready';
-                statusText.textContent = 'Ready';
+                statusElement.textContent = 'AI classifier ready';
+                statusText.textContent = 'Active';
                 statusIndicator.className = 'status-dot active';
                 break;
             case 'error':
-                statusElement.textContent = 'Extension not loaded';
+                statusElement.textContent = 'Extension error';
                 statusText.textContent = 'Error';
                 statusIndicator.className = 'status-dot';
                 break;
             case 'processing':
-                statusElement.textContent = 'Processing videos...';
+                statusElement.textContent = 'Analyzing content...';
                 statusText.textContent = 'Processing...';
                 statusIndicator.className = 'status-dot';
                 break;
@@ -185,252 +420,156 @@ class PopupController {
     async applyFilters() {
         const button = document.getElementById('apply-filters');
         button.classList.add('loading');
+        button.textContent = 'Applying...';
         
         try {
-            // Get current tab
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tabs[0] && tabs[0].url.includes('youtube.com')) {
-                console.log('🔄 Sending apply filters message to content script');
-                
-                // Send message to content script to apply filters and wait for response
-                const response = await new Promise((resolve, reject) => {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        type: 'APPLY_FILTERS',
-                        settings: this.filterSettings
-                    }, (response) => {
-                        if (chrome.runtime.lastError) {
-                            reject(new Error(chrome.runtime.lastError.message));
-                        } else {
-                            resolve(response);
-                        }
-                    });
+                const response = await this.sendMessageToTab(tabs[0].id, {
+                    type: 'APPLY_FILTERS',
+                    settings: this.filterSettings
                 });
                 
                 if (response && response.success) {
-                    console.log('✅ Filters applied successfully:', response);
-                    // Update stats if provided
-                    if (response.stats) {
-                        this.stats = response.stats;
-                        this.updateStats();
-                    }
-                    
-                    // Show success feedback and keep it
-                    button.textContent = '✓ Filters Applied';
-                    button.style.backgroundColor = '#4caf50';
-                    
-                    // Reset button after 3 seconds
+                    this.showNotification('Filters applied successfully!');
                     setTimeout(() => {
-                        button.style.backgroundColor = '';
-                        this.updateFilterCount();
-                    }, 3000);
-                } else {
-                    throw new Error(response?.error || 'Unknown error applying filters');
+                        this.loadStats();
+                    }, 1000);
                 }
-                
             } else {
                 this.showNotification('Please navigate to YouTube first');
             }
         } catch (error) {
             console.error('Error applying filters:', error);
-            this.showNotification('Error applying filters: ' + error.message);
-            
-            // Reset button on error
-            button.textContent = 'Apply Filters';
-            button.style.backgroundColor = '';
+            this.showNotification('Error applying filters');
         } finally {
             button.classList.remove('loading');
+            this.updateActiveFiltersCount(); // Restore button text
         }
     }
 
     resetFilters() {
-        // Reset all categories to unchecked except educational and entertainment
-        this.filterSettings.categories = {
-            educational: true,
-            entertainment: true,
-            news: false,
-            technology: false,
-            gaming: false,
-            music: false,
-            sports: false,
-            comedy: false
-        };
-        this.filterSettings.mode = 'show';
+        // Reset all filters to false
+        Object.keys(this.filterSettings).forEach(category => {
+            if (typeof this.filterSettings[category] === 'object') {
+                Object.keys(this.filterSettings[category]).forEach(filter => {
+                    this.filterSettings[category][filter] = false;
+                });
+            }
+        });
         
+        this.filterSettings.hideMode = false;
         this.updateUI();
+        this.updateActiveFiltersCount();
         this.saveSettings();
+        this.showNotification('All filters reset');
+    }
+
+    async sendMessageToTab(tabId, message) {
+        return new Promise((resolve, reject) => {
+            chrome.tabs.sendMessage(tabId, message, (response) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve(response);
+                }
+            });
+        });
+    }
+
+    showNotification(message) {
+        // Create or update notification
+        let notification = document.querySelector('.notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.className = 'notification';
+            document.body.appendChild(notification);
+        }
         
-        // Reset stats
-        this.stats = { processed: 0, filtered: 0 };
-        chrome.storage.local.set({ filterStats: this.stats });
-        this.updateStats();
+        notification.textContent = message;
+        notification.style.display = 'block';
         
-        this.showNotification('Filters reset');
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
     }
 
     async checkExtensionStatus() {
         try {
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tabs[0] && tabs[0].url.includes('youtube.com')) {
-                console.log('🔍 Checking extension status on:', tabs[0].url);
-                
-                // Try to ping content script with retry logic
-                await this.pingContentScriptWithRetry(tabs[0].id, 3);
+                try {
+                    await this.sendMessageToTab(tabs[0].id, { type: 'PING' });
+                    this.updateModelStatus('ready');
+                } catch (error) {
+                    this.updateModelStatus('error');
+                    // Try to inject content script
+                    await this.tryInjectContentScript(tabs[0].id);
+                }
             } else {
                 this.updateModelStatus('error');
-                this.updateExtensionStatus('Navigate to YouTube to use filters');
             }
         } catch (error) {
-            console.error('Error checking status:', error);
+            console.error('Error checking extension status:', error);
             this.updateModelStatus('error');
-            this.updateExtensionStatus('Error checking extension status');
-        }
-    }
-
-    async pingContentScriptWithRetry(tabId, maxRetries = 3) {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                console.log(`📡 Attempting to ping content script (attempt ${attempt}/${maxRetries})`);
-                
-                const response = await new Promise((resolve, reject) => {
-                    chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
-                        if (chrome.runtime.lastError) {
-                            reject(new Error(chrome.runtime.lastError.message));
-                        } else {
-                            resolve(response);
-                        }
-                    });
-                });
-
-                if (response && response.status === 'active') {
-                    console.log('✅ Content script is active');
-                    this.updateModelStatus('ready');
-                    this.updateExtensionStatus('✅ Active on this page');
-                    
-                    // Now try to refresh videos
-                    await this.refreshVideosWithFallback(tabId);
-                    return; // Success, exit retry loop
-                }
-            } catch (error) {
-                console.log(`❌ Ping attempt ${attempt} failed:`, error.message);
-                
-                if (attempt === maxRetries) {
-                    // All retries failed
-                    this.updateModelStatus('error');
-                    this.updateExtensionStatus('❌ Content script not responding');
-                    
-                    // Try to inject the content script
-                    await this.tryInjectContentScript(tabId);
-                } else {
-                    // Wait before next retry
-                    this.updateExtensionStatus(`🔄 Connecting... (${attempt}/${maxRetries})`);
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-            }
         }
     }
 
     async tryInjectContentScript(tabId) {
         try {
-            console.log('🔧 Attempting to inject content script...');
-            this.updateExtensionStatus('🔧 Injecting content script...');
-            
-            // Try to inject the content script manually
             await chrome.scripting.executeScript({
                 target: { tabId: tabId },
-                files: ['transformers-loader.js', 'content.js']
+                files: ['content.js']
             });
             
-            await chrome.scripting.insertCSS({
-                target: { tabId: tabId },
-                files: ['content.css']
-            });
-            
-            // Wait a moment for injection to complete
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Try pinging again
-            await this.pingContentScriptWithRetry(tabId, 2);
-            
+            // Wait a bit and check again
+            setTimeout(async () => {
+                try {
+                    await this.sendMessageToTab(tabId, { type: 'PING' });
+                    this.updateModelStatus('ready');
+                } catch (error) {
+                    this.updateModelStatus('error');
+                }
+            }, 1000);
         } catch (error) {
-            console.error('Failed to inject content script:', error);
-            this.updateExtensionStatus('❌ Failed to load extension');
+            console.error('Error injecting content script:', error);
+            this.updateModelStatus('error');
         }
-    }
-
-    async refreshVideosWithFallback(tabId) {
-        try {
-            const refreshResponse = await new Promise((resolve, reject) => {
-                chrome.tabs.sendMessage(tabId, { 
-                    type: 'REFRESH_VIDEOS',
-                    settings: this.filterSettings 
-                }, (response) => {
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message));
-                    } else {
-                        resolve(response);
-                    }
-                });
-            });
-            
-            if (refreshResponse && refreshResponse.success && refreshResponse.stats) {
-                this.stats = refreshResponse.stats;
-                this.updateStats();
-                console.log('📊 Stats updated from refresh:', this.stats);
-            }
-        } catch (error) {
-            console.log('⚠️ Could not refresh videos:', error.message);
-            // Don't show error to user - extension is working, just couldn't refresh
-        }
-    }
-
-    updateExtensionStatus(message) {
-        const statusText = document.getElementById('status-text');
-        const modelStatus = document.getElementById('model-status');
-        
-        if (statusText) {
-            statusText.textContent = message;
-        }
-        if (modelStatus) {
-            modelStatus.textContent = message;
-        }
-    }
-
-    showNotification(message) {
-        // Create a temporary notification
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-        `;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
     }
 }
 
 // Initialize popup when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new PopupController();
+    new EnhancedPopupController();
 });
 
-// Add slide-in animation styles
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
-        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+// Add notification styles
+const notificationStyle = document.createElement('style');
+notificationStyle.textContent = `
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #667eea;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 1000;
+    display: none;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
     }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
 `;
-document.head.appendChild(style); 
+document.head.appendChild(notificationStyle); 

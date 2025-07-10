@@ -8,6 +8,7 @@
  * - Applies targeted blurring to .media-item-thumbnail-container when filtering
  * - Enhanced metadata classification using title, description, and channel information
  * - Improved filtering application for context renderer elements
+ * - Support for new categorized filter structure
  */
 
 // Global flag to prevent duplicate initialization
@@ -21,16 +22,54 @@ class YouTubeFilter {
     constructor() {
         this.classifier = null;
         this.settings = {
-            categories: {
-                educational: true,
-                entertainment: true,
-                news: false,
-                technology: false,
-                gaming: false,
-                music: false,
-                sports: false,
-                comedy: false
+            // New categorized structure
+            safety: {
+                'adult-content': false,
+                'violence': false,
+                'politics': false,
+                'news': false,
+                'religion': false
             },
+            entertainment: {
+                'gaming': false,
+                'music': false,
+                'movies-tv': false,
+                'sports': false,
+                'comedy': false,
+                'beauty-fashion': false,
+                'food-cooking': false,
+                'travel': false
+            },
+            educational: {
+                'educational': false,
+                'technology': false,
+                'business': false,
+                'health-fitness': false,
+                'science': false,
+                'diy-crafts': false
+            },
+            lifestyle: {
+                'dating-relationships': false,
+                'asmr': false,
+                'meditation': false,
+                'conspiracy': false,
+                'true-crime': false
+            },
+            outdoor: {
+                'hiking-outdoors': false,
+                'adventure-sports': false,
+                'hunting-fishing': false,
+                'automotive': false,
+                'aviation': false
+            },
+            specialized: {
+                'geopolitics': false,
+                'cryptocurrency': false,
+                'paranormal': false,
+                'minimalism': false,
+                'prepping': false
+            },
+            hideMode: false,
             mode: 'show'
         };
         this.stats = {
@@ -60,6 +99,16 @@ class YouTubeFilter {
             console.log('🎯 Auto-applying filters on page load...');
             await this.applyFilters();
             
+            // Set up periodic auto-application to catch any missed videos
+            setInterval(async () => {
+                const unprocessedVideos = this.findUnprocessedVideos();
+                if (unprocessedVideos.length > 0) {
+                    console.log(`🔄 Found ${unprocessedVideos.length} unprocessed videos, processing...`);
+                    await this.processExistingVideos();
+                    await this.applyFilters();
+                }
+            }, 5000); // Check every 5 seconds
+            
         } catch (error) {
             console.error('Error initializing YouTube Filter:', error);
             this.sendMessage({ type: 'MODEL_STATUS', status: 'error' });
@@ -70,10 +119,61 @@ class YouTubeFilter {
         try {
             const result = await chrome.storage.local.get(['filterSettings']);
             if (result.filterSettings) {
-                this.settings = { ...this.settings, ...result.filterSettings };
+                this.settings = this.mergeSettings(this.settings, result.filterSettings);
             }
         } catch (error) {
             console.error('Error loading settings:', error);
+        }
+    }
+
+    mergeSettings(defaultSettings, savedSettings) {
+        const merged = { ...defaultSettings };
+        
+        // Handle both old and new format settings
+        if (savedSettings.categories) {
+            // Convert old format to new format
+            console.log('🔄 Converting old settings format to new format');
+            this.convertOldSettings(savedSettings, merged);
+        } else {
+            // Merge new format settings
+            Object.keys(defaultSettings).forEach(category => {
+                if (typeof defaultSettings[category] === 'object' && savedSettings[category]) {
+                    merged[category] = { ...defaultSettings[category], ...savedSettings[category] };
+                } else if (savedSettings[category] !== undefined) {
+                    merged[category] = savedSettings[category];
+                }
+            });
+        }
+        
+        return merged;
+    }
+
+    convertOldSettings(oldSettings, newSettings) {
+        // Map old categories to new structure
+        const categoryMapping = {
+            'educational': ['educational', 'educational'],
+            'entertainment': ['entertainment', 'comedy'],
+            'news': ['safety', 'news'],
+            'technology': ['educational', 'technology'],
+            'gaming': ['entertainment', 'gaming'],
+            'music': ['entertainment', 'music'],
+            'sports': ['entertainment', 'sports'],
+            'comedy': ['entertainment', 'comedy']
+        };
+
+        Object.keys(oldSettings.categories || {}).forEach(oldCategory => {
+            const mapping = categoryMapping[oldCategory];
+            if (mapping) {
+                const [newCategoryGroup, newFilter] = mapping;
+                if (newSettings[newCategoryGroup] && newSettings[newCategoryGroup][newFilter] !== undefined) {
+                    newSettings[newCategoryGroup][newFilter] = oldSettings.categories[oldCategory];
+                }
+            }
+        });
+
+        // Copy other settings
+        if (oldSettings.mode !== undefined) {
+            newSettings.mode = oldSettings.mode;
         }
     }
 
@@ -106,42 +206,53 @@ class YouTubeFilter {
     initializeFallbackClassifier() {
         console.log('🔄 Using fallback rule-based classifier');
         
-        // Define keyword patterns for each category
+        // Enhanced keyword patterns for new categorized structure
         this.categoryKeywords = {
-            educational: [
-                'tutorial', 'learn', 'education', 'course', 'lesson', 'guide', 'how to',
-                'explained', 'science', 'math', 'history', 'programming', 'coding',
-                'lecture', 'university', 'school', 'study', 'teaching', 'instructor'
-            ],
-            entertainment: [
-                'funny', 'comedy', 'entertainment', 'movie', 'film', 'trailer',
-                'celebrity', 'gossip', 'drama', 'reality', 'show', 'series'
-            ],
-            news: [
-                'news', 'breaking', 'report', 'journalism', 'politics', 'election',
-                'government', 'world', 'update', 'latest', 'current events'
-            ],
-            technology: [
-                'tech', 'technology', 'gadget', 'smartphone', 'computer', 'software',
-                'ai', 'artificial intelligence', 'robot', 'innovation', 'startup',
-                'programming', 'coding', 'developer', 'app', 'digital'
-            ],
-            gaming: [
-                'gaming', 'game', 'gameplay', 'streamer', 'twitch', 'xbox', 'playstation',
-                'nintendo', 'esports', 'gamer', 'video game', 'pc gaming'
-            ],
-            music: [
-                'music', 'song', 'album', 'artist', 'concert', 'performance',
-                'musician', 'band', 'singer', 'lyrics', 'audio', 'sound'
-            ],
-            sports: [
-                'sports', 'football', 'basketball', 'soccer', 'baseball', 'tennis',
-                'olympics', 'fitness', 'workout', 'athlete', 'team', 'match'
-            ],
-            comedy: [
-                'comedy', 'funny', 'humor', 'joke', 'laugh', 'comedian',
-                'stand up', 'meme', 'parody', 'satire', 'sketch'
-            ]
+            // Safety & Content
+            'adult-content': ['adult', '18+', 'nsfw', 'explicit', 'mature', 'xxx', 'porn', 'sex'],
+            'violence': ['violence', 'violent', 'fight', 'war', 'weapon', 'gun', 'blood', 'death', 'kill'],
+            'politics': ['politics', 'political', 'election', 'government', 'president', 'congress', 'senate', 'vote'],
+            'news': ['news', 'breaking', 'report', 'journalism', 'current events', 'update', 'latest'],
+            'religion': ['religion', 'religious', 'church', 'christian', 'islam', 'buddhist', 'hindu', 'prayer'],
+
+            // Entertainment
+            'gaming': ['gaming', 'game', 'gameplay', 'streamer', 'twitch', 'xbox', 'playstation', 'nintendo', 'esports'],
+            'music': ['music', 'song', 'album', 'artist', 'concert', 'musician', 'band', 'singer', 'lyrics'],
+            'movies-tv': ['movie', 'film', 'trailer', 'cinema', 'tv show', 'series', 'episode', 'actor', 'actress'],
+            'sports': ['sports', 'football', 'basketball', 'soccer', 'baseball', 'tennis', 'olympics', 'athlete'],
+            'comedy': ['comedy', 'funny', 'humor', 'joke', 'laugh', 'comedian', 'stand up', 'meme', 'parody'],
+            'beauty-fashion': ['beauty', 'makeup', 'fashion', 'style', 'outfit', 'skincare', 'cosmetics', 'haul'],
+            'food-cooking': ['cooking', 'recipe', 'food', 'chef', 'kitchen', 'baking', 'restaurant', 'cuisine'],
+            'travel': ['travel', 'vacation', 'trip', 'destination', 'tourism', 'hotel', 'flight', 'adventure'],
+
+            // Educational
+            'educational': ['tutorial', 'learn', 'education', 'course', 'lesson', 'guide', 'how to', 'explained'],
+            'technology': ['tech', 'technology', 'gadget', 'smartphone', 'computer', 'software', 'ai', 'programming'],
+            'business': ['business', 'entrepreneur', 'startup', 'finance', 'investing', 'marketing', 'company'],
+            'health-fitness': ['health', 'fitness', 'workout', 'exercise', 'nutrition', 'diet', 'wellness', 'yoga'],
+            'science': ['science', 'research', 'experiment', 'biology', 'chemistry', 'physics', 'study'],
+            'diy-crafts': ['diy', 'craft', 'handmade', 'tutorial', 'project', 'creative', 'art', 'build'],
+
+            // Lifestyle
+            'dating-relationships': ['dating', 'relationship', 'love', 'romance', 'couple', 'marriage', 'boyfriend'],
+            'asmr': ['asmr', 'relaxing', 'sleep', 'whisper', 'tingles', 'calm', 'peaceful'],
+            'meditation': ['meditation', 'mindfulness', 'spiritual', 'zen', 'peace', 'tranquil', 'inner'],
+            'conspiracy': ['conspiracy', 'theory', 'secret', 'hidden', 'truth', 'exposed', 'cover up'],
+            'true-crime': ['true crime', 'murder', 'investigation', 'detective', 'case', 'documentary', 'serial'],
+
+            // Outdoor
+            'hiking-outdoors': ['hiking', 'outdoors', 'nature', 'camping', 'trail', 'mountain', 'wilderness'],
+            'adventure-sports': ['extreme', 'adventure', 'skydiving', 'surfing', 'climbing', 'snowboarding'],
+            'hunting-fishing': ['hunting', 'fishing', 'outdoor', 'wildlife', 'angling', 'catch', 'deer'],
+            'automotive': ['car', 'automotive', 'vehicle', 'driving', 'racing', 'mechanic', 'engine'],
+            'aviation': ['aviation', 'plane', 'aircraft', 'flying', 'pilot', 'airport', 'flight'],
+
+            // Specialized
+            'geopolitics': ['geopolitics', 'international', 'global', 'world affairs', 'diplomacy', 'foreign'],
+            'cryptocurrency': ['crypto', 'bitcoin', 'blockchain', 'ethereum', 'trading', 'nft', 'defi'],
+            'paranormal': ['paranormal', 'ghost', 'supernatural', 'unexplained', 'mystery', 'haunted'],
+            'minimalism': ['minimalism', 'minimal', 'simple', 'declutter', 'less', 'organized'],
+            'prepping': ['prepping', 'survival', 'emergency', 'preparedness', 'disaster', 'self-reliance']
         };
     }
 
@@ -156,14 +267,14 @@ class YouTubeFilter {
                 
                 case 'SETTINGS_UPDATED':
                     console.log('⚙️ Settings updated:', message.settings);
-                    this.settings = message.settings;
+                    this.settings = this.mergeSettings(this.settings, message.settings);
                     this.applyFilters();
                     sendResponse({ success: true, action: 'settings_updated' });
                     return false; // Synchronous response
                 
                 case 'APPLY_FILTERS':
                     console.log('🔄 Apply filters requested:', message.settings);
-                    this.settings = message.settings;
+                    this.settings = this.mergeSettings(this.settings, message.settings);
                     
                     // Handle async operation properly
                     this.handleApplyFilters(sendResponse);
@@ -171,7 +282,9 @@ class YouTubeFilter {
                 
                 case 'REFRESH_VIDEOS':
                     console.log('🔄 Refreshing video processing');
-                    this.settings = message.settings;
+                    if (message.settings) {
+                        this.settings = this.mergeSettings(this.settings, message.settings);
+                    }
                     
                     // Handle async operation properly
                     this.handleRefreshVideos(sendResponse);
@@ -209,7 +322,9 @@ class YouTubeFilter {
     async handleRefreshVideos(sendResponse) {
         try {
             console.log('🔄 Starting video refresh...');
+            this.processedVideos.clear(); // Clear processed videos to reprocess
             await this.processExistingVideos();
+            await this.applyFilters();
             const response = { 
                 success: true, 
                 action: 'videos_refreshed',
@@ -229,9 +344,32 @@ class YouTubeFilter {
     }
 
     startObserving() {
-        // Watch for new videos being loaded
+        console.log('🔍 Starting video observation...');
+        
+        // Watch for new videos being loaded with more specific targeting
         this.observer = new MutationObserver((mutations) => {
-            this.debounceProcessing();
+            let shouldProcess = false;
+            
+            mutations.forEach(mutation => {
+                // Check if new video elements were added
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        const element = node;
+                        // Check if this is a video element or contains video elements
+                        if (element.matches && (
+                            element.matches('ytm-video-with-context-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-rich-item-renderer') ||
+                            element.querySelector('ytm-video-with-context-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-rich-item-renderer')
+                        )) {
+                            shouldProcess = true;
+                            console.log('🆕 New video content detected');
+                        }
+                    }
+                });
+            });
+            
+            if (shouldProcess) {
+                this.debounceProcessing();
+            }
         });
 
         this.observer.observe(document.body, {
@@ -239,21 +377,36 @@ class YouTubeFilter {
             subtree: true
         });
 
+        // Also listen for scroll events to catch infinite scroll loading
+        let scrollTimer;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                console.log('📜 Scroll detected, checking for new videos...');
+                this.debounceProcessing();
+            }, 1000);
+        }, { passive: true });
+
         // Also listen for navigation changes
         let lastUrl = location.href;
         new MutationObserver(() => {
             const url = location.href;
             if (url !== lastUrl) {
                 lastUrl = url;
-                setTimeout(() => this.processExistingVideos(), 1000);
+                console.log('🔄 YouTube navigation detected, reprocessing videos...');
+                setTimeout(async () => {
+                    await this.processExistingVideos();
+                    await this.applyFilters();
+                }, 1000);
             }
         }).observe(document, { subtree: true, childList: true });
     }
 
     debounceProcessing() {
         clearTimeout(this.debounceTimer);
-        this.debounceTimer = setTimeout(() => {
-            this.processExistingVideos();
+        this.debounceTimer = setTimeout(async () => {
+            await this.processExistingVideos();
+            await this.applyFilters();
         }, 500);
     }
 
@@ -303,6 +456,32 @@ class YouTubeFilter {
         this.updateStats();
     }
 
+    findUnprocessedVideos() {
+        const videoSelectors = [
+            'ytm-video-with-context-renderer',
+            'ytd-video-renderer',
+            'ytd-grid-video-renderer',
+            'ytd-rich-item-renderer',
+            'ytd-compact-video-renderer'
+        ];
+
+        const unprocessedVideos = [];
+        
+        for (const selector of videoSelectors) {
+            const videos = document.querySelectorAll(selector);
+            videos.forEach(video => {
+                if (!video.hasAttribute('data-filter-category')) {
+                    const videoId = this.getVideoId(video);
+                    if (videoId && !this.processedVideos.has(videoId)) {
+                        unprocessedVideos.push(video);
+                    }
+                }
+            });
+        }
+        
+        return unprocessedVideos;
+    }
+
     async processVideo(videoElement) {
         try {
             // Skip if already processed
@@ -327,332 +506,268 @@ class YouTubeFilter {
             // Classify the video
             const category = await this.classifyVideo(metadata);
             console.log(`🏷️ Classified as: ${category}`);
-            
-            // Store classification result
-            videoElement.setAttribute('data-filter-category', category);
+
+            // Mark as processed and store category
             this.processedVideos.add(videoId);
+            videoElement.setAttribute('data-filter-category', category);
+            
             this.stats.processed++;
-
-            // Apply current filter
-            const wasFiltered = this.applyFilterToVideo(videoElement, category);
-            if (wasFiltered) {
-                console.log(`🚫 Video filtered out (${category})`);
-            } else {
-                console.log(`✅ Video shown (${category})`);
-            }
-
+            
         } catch (error) {
             console.error('Error processing video:', error);
         }
     }
 
     getVideoId(element) {
-        // Try to extract video ID from various sources
-        const linkSelectors = [
-            'a[href*="/watch?v="]',
-            'a[href*="/shorts/"]',
-            'a[href*="youtube.com/watch"]'
-        ];
-        
-        for (const selector of linkSelectors) {
-            const link = element.querySelector(selector);
-            if (link) {
-                try {
-                    if (link.href.includes('/shorts/')) {
-                        // Extract from shorts URL: /shorts/VIDEO_ID
-                        const match = link.href.match(/\/shorts\/([a-zA-Z0-9_-]+)/);
-                        if (match) return match[1];
-                    } else {
-                        // Extract from regular watch URL
-                        const url = new URL(link.href, window.location.origin);
-                        const videoId = url.searchParams.get('v');
-                        if (videoId) return videoId;
-                    }
-                } catch (error) {
-                    console.debug('Error parsing video URL:', error);
+        // Try multiple methods to extract video ID
+        const methods = [
+            // From href attributes
+            () => {
+                const link = element.querySelector('a[href*="/watch?v="], a[href*="/shorts/"]') || 
+                           (element.tagName === 'A' && element.href);
+                if (link) {
+                    const href = typeof link === 'string' ? link : link.href;
+                    const match = href.match(/(?:watch\?v=|shorts\/)([a-zA-Z0-9_-]{11})/);
+                    return match ? match[1] : null;
                 }
+                return null;
+            },
+            
+            // From data attributes
+            () => element.getAttribute('data-context-item-id'),
+            () => {
+                const dataId = element.getAttribute('data-video-id') || 
+                             element.getAttribute('data-id');
+                return dataId;
+            },
+            
+            // From nested elements
+            () => {
+                const thumbnailLink = element.querySelector('[data-video-id]');
+                return thumbnailLink ? thumbnailLink.getAttribute('data-video-id') : null;
+            },
+            
+            // Generate unique ID based on title and position if no video ID found
+            () => {
+                const title = this.extractVideoMetadata(element).title;
+                if (title) {
+                    return 'generated_' + btoa(title).substring(0, 11);
+                }
+                return null;
+            }
+        ];
+
+        for (const method of methods) {
+            try {
+                const id = method();
+                if (id) return id;
+            } catch (e) {
+                continue;
             }
         }
-        
-        // Fallback: try to extract from data attributes
-        const dataId = element.getAttribute('data-context-item-id') || 
-                     element.getAttribute('data-video-id');
-        if (dataId) return dataId;
-        
+
         return null;
     }
 
     extractVideoMetadata(videoElement) {
-        // Check if this is a ytm-video-with-context-renderer for enhanced extraction
-        const isContextRenderer = videoElement.tagName?.toLowerCase() === 'ytm-video-with-context-renderer' || 
-                                 videoElement.closest('ytm-video-with-context-renderer');
-        
-        if (isContextRenderer) {
-            console.log('🎯 Processing ytm-video-with-context-renderer for comprehensive details');
-            return this.extractFromContextRenderer(videoElement.tagName?.toLowerCase() === 'ytm-video-with-context-renderer' ? videoElement : videoElement.closest('ytm-video-with-context-renderer'));
-        }
-
-        // Fallback to comprehensive selectors for other video elements
-        const titleSelectors = [
-            // Desktop selectors
-            '#video-title',
-            '.ytd-video-meta-block #video-title', 
-            'h3 a',
-            '.video-title',
-            'a[aria-describedby]',
-            '.ytd-rich-grid-media #video-title',
-            '.ytd-compact-video-renderer #video-title',
-            'yt-formatted-string[aria-label]',
-            '.style-scope.ytd-video-renderer #video-title',
-            // Mobile selectors
-            '.media-item-headline',
-            '.compact-media-item-headline', 
-            '.video-title-link',
-            'h4 a',
-            '.details h4 a',
-            '.metadata h4 a',
-            'a[title]',
-            '.compact-media-item-metadata a'
-        ];
-        
-        const channelSelectors = [
-            // Desktop selectors
-            '#channel-name',
-            '.ytd-video-meta-block #channel-name',
-            '.ytd-channel-name a',
-            'ytd-channel-name a',
-            '.ytd-video-owner-renderer a',
-            '.ytd-video-meta-block .ytd-channel-name a',
-            // Mobile selectors
-            '.media-item-info a',
-            '.compact-media-item-info a',
-            '.channel-name',
-            '.details .channel-name',
-            '.metadata .channel-name',
-            '.byline a',
-            '.compact-media-item-byline a'
-        ];
-        
-        const descriptionSelectors = [
-            // Desktop selectors
-            '#description-text',
-            '.description-snippet',
-            '.metadata-snippet-text',
-            '.style-scope.ytd-video-meta-block .description-snippet',
-            // Mobile selectors
-            '.media-item-snippet',
-            '.compact-media-item-snippet',
-            '.description',
-            '.details .description',
-            '.metadata .description'
-        ];
-        
-        let titleElement = null;
-        let channelElement = null; 
-        let descriptionElement = null;
-        
-        // Try each selector until we find content
-        for (const selector of titleSelectors) {
-            titleElement = videoElement.querySelector(selector);
-            if (titleElement && titleElement.textContent.trim()) break;
-        }
-        
-        for (const selector of channelSelectors) {
-            channelElement = videoElement.querySelector(selector);
-            if (channelElement && channelElement.textContent.trim()) break;
-        }
-        
-        for (const selector of descriptionSelectors) {
-            descriptionElement = videoElement.querySelector(selector);
-            if (descriptionElement && descriptionElement.textContent.trim()) break;
-        }
-        
-        const metadata = {
-            title: titleElement?.textContent?.trim() || '',
-            channel: channelElement?.textContent?.trim() || '',
-            description: descriptionElement?.textContent?.trim() || '',
-            thumbnail: null // No thumbnail extraction for non-context-renderer elements
+        let metadata = {
+            title: '',
+            channel: '',
+            description: '',
+            duration: '',
+            views: ''
         };
-        
-        // Fallback: if no title found, try to extract from link text or any text content
-        if (!metadata.title) {
-            // Try to get title from the actual link text
-            const linkElement = videoElement.querySelector('a[href*="/watch"], a[href*="/shorts"]');
-            if (linkElement && linkElement.textContent.trim()) {
-                metadata.title = linkElement.textContent.trim();
-                console.log('📝 Extracted title from link text:', metadata.title);
-            } else {
-                // Last resort: try to extract meaningful text from the element
-                const allText = videoElement.textContent?.trim();
-                if (allText && allText.length > 10) {
-                    // Take first meaningful line as title
-                    const lines = allText.split('\n').filter(line => line.trim().length > 5);
-                    if (lines.length > 0) {
-                        metadata.title = lines[0].trim().substring(0, 100);
-                        console.log('📝 Extracted title from text content:', metadata.title);
-                    }
+
+        try {
+            // Check if this is a ytm-video-with-context-renderer (priority method)
+            const contextRenderer = videoElement.querySelector('ytm-video-with-context-renderer') || 
+                                   (videoElement.tagName?.toLowerCase() === 'ytm-video-with-context-renderer' ? videoElement : null);
+            
+            if (contextRenderer) {
+                console.log('🎯 Extracting from ytm-video-with-context-renderer');
+                const contextData = this.extractFromContextRenderer(contextRenderer);
+                if (contextData.title) {
+                    return contextData;
                 }
             }
+
+            // Fallback extraction methods
+            const selectors = {
+                title: [
+                    '#video-title',
+                    '.video-title',
+                    '[aria-label*="title"]',
+                    'h3 a',
+                    'h4 a',
+                    '.compact-media-item-headline',
+                    '.media-item-headline',
+                    '.ytm-video-description-headline',
+                    '.compact-media-item-metadata .compact-media-item-headline',
+                    '[id*="title"]',
+                    'a[title]'
+                ],
+                channel: [
+                    '.channel-name',
+                    '.ytd-channel-name',
+                    '[href*="/channel/"]',
+                    '[href*="/@"]',
+                    '.compact-media-item-byline',
+                    '.media-item-byline',
+                    '.ytm-video-description-byline'
+                ],
+                description: [
+                    '.video-description',
+                    '.description-text',
+                    '.compact-media-item-metadata',
+                    '.media-item-metadata'
+                ]
+            };
+
+            // Extract title
+            for (const selector of selectors.title) {
+                const element = videoElement.querySelector(selector);
+                if (element) {
+                    metadata.title = element.textContent?.trim() || element.title?.trim() || element.getAttribute('aria-label')?.trim() || '';
+                    if (metadata.title) break;
+                }
+            }
+
+            // Extract channel
+            for (const selector of selectors.channel) {
+                const element = videoElement.querySelector(selector);
+                if (element) {
+                    metadata.channel = element.textContent?.trim() || '';
+                    if (metadata.channel) break;
+                }
+            }
+
+            // Extract description
+            for (const selector of selectors.description) {
+                const element = videoElement.querySelector(selector);
+                if (element) {
+                    metadata.description = element.textContent?.trim() || '';
+                    if (metadata.description) break;
+                }
+            }
+
+            // Clean up extracted data
+            metadata.title = metadata.title.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            metadata.channel = metadata.channel.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            metadata.description = metadata.description.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+
+        } catch (error) {
+            console.error('Error extracting metadata:', error);
         }
-        
-        // Debug logging for metadata extraction
-        if (!metadata.title) {
-            console.log('⚠️ Could not extract title from video element');
-            console.log('Element HTML:', videoElement.outerHTML.substring(0, 200));
-            console.log('Available text content:', videoElement.textContent?.substring(0, 100));
-        } else {
-            console.log('✅ Extracted metadata:', { 
-                title: metadata.title.substring(0, 50) + '...', 
-                channel: metadata.channel,
-                hasDescription: !!metadata.description 
-            });
-        }
-        
+
+        console.log('📊 Extracted metadata:', metadata);
         return metadata;
     }
 
     extractFromContextRenderer(contextRenderer) {
-        console.log('🔍 Extracting comprehensive details from ytm-video-with-context-renderer');
-        
-        // Extract thumbnail
-        const thumbnailSelectors = [
-            '.media-item-thumbnail-container img',
-            'ytm-thumbnail-cover img',
-            '.video-thumbnail-img',
-            '.yt-core-image',
-            'img[src*="ytimg.com"]',
-            'img'
-        ];
-        
-        let thumbnailElement = null;
-        for (const selector of thumbnailSelectors) {
-            thumbnailElement = contextRenderer.querySelector(selector);
-            if (thumbnailElement && thumbnailElement.src) break;
-        }
-        
-        // Extract title with enhanced selectors for context renderer
-        const titleSelectors = [
-            '.media-item-headline a',
-            '.media-item-headline',
-            '.compact-media-item-headline a',
-            '.compact-media-item-headline',
-            'h4 a',
-            'h3 a',
-            '.details h4 a',
-            '.metadata h4 a',
-            'a[title]',
-            'yt-formatted-string',
-            '.video-title-link'
-        ];
-        
-        let titleElement = null;
-        for (const selector of titleSelectors) {
-            titleElement = contextRenderer.querySelector(selector);
-            if (titleElement && titleElement.textContent?.trim()) break;
-        }
-        
-        // Extract channel with enhanced selectors
-        const channelSelectors = [
-            '.media-item-info a',
-            '.compact-media-item-info a',
-            '.media-channel a',
-            '.channel-name a',
-            '.details .channel-name',
-            '.metadata .channel-name',
-            '.byline a',
-            '.compact-media-item-byline a',
-            'ytm-badge-and-byline-renderer a',
-            '.ytm-badge-and-byline-renderer a'
-        ];
-        
-        let channelElement = null;
-        for (const selector of channelSelectors) {
-            channelElement = contextRenderer.querySelector(selector);
-            if (channelElement && channelElement.textContent?.trim()) break;
-        }
-        
-        // Extract description/snippet
-        const descriptionSelectors = [
-            '.media-item-snippet',
-            '.compact-media-item-snippet',
-            '.description',
-            '.details .description',
-            '.metadata .description',
-            '.video-snippet',
-            '.description-snippet'
-        ];
-        
-        let descriptionElement = null;
-        for (const selector of descriptionSelectors) {
-            descriptionElement = contextRenderer.querySelector(selector);
-            if (descriptionElement && descriptionElement.textContent?.trim()) break;
-        }
-        
         const metadata = {
-            title: titleElement?.textContent?.trim() || titleElement?.getAttribute('title')?.trim() || '',
-            channel: channelElement?.textContent?.trim() || '',
-            description: descriptionElement?.textContent?.trim() || '',
-            thumbnail: thumbnailElement?.src || null,
-            hasContextRenderer: true
+            title: '',
+            channel: '',
+            description: '',
+            duration: '',
+            views: ''
         };
-        
-        console.log('✅ Extracted comprehensive metadata from context renderer:', {
-            title: metadata.title.substring(0, 50) + '...',
-            channel: metadata.channel,
-            hasDescription: !!metadata.description,
-            hasThumbnail: !!metadata.thumbnail,
-            thumbnailUrl: metadata.thumbnail ? metadata.thumbnail.substring(0, 50) + '...' : 'none'
-        });
-        
+
+        try {
+            // Enhanced extraction for ytm-video-with-context-renderer
+            console.log('🔍 Analyzing ytm-video-with-context-renderer structure...');
+
+            // Method 1: Direct text content extraction
+            const headlineElement = contextRenderer.querySelector('.compact-media-item-headline, .media-item-headline, .ytm-video-description-headline');
+            if (headlineElement) {
+                metadata.title = headlineElement.textContent?.trim() || '';
+                console.log('📝 Title found (headline):', metadata.title);
+            }
+
+            // Method 2: Link-based extraction
+            if (!metadata.title) {
+                const titleLink = contextRenderer.querySelector('a[title], a[aria-label]');
+                if (titleLink) {
+                    metadata.title = titleLink.title?.trim() || titleLink.getAttribute('aria-label')?.trim() || '';
+                    console.log('📝 Title found (link):', metadata.title);
+                }
+            }
+
+            // Method 3: Comprehensive search
+            if (!metadata.title) {
+                const possibleTitleElements = contextRenderer.querySelectorAll('h1, h2, h3, h4, h5, h6, [class*="title"], [class*="headline"]');
+                for (const element of possibleTitleElements) {
+                    const text = element.textContent?.trim();
+                    if (text && text.length > 10) { // Reasonable title length
+                        metadata.title = text;
+                        console.log('📝 Title found (comprehensive):', metadata.title);
+                        break;
+                    }
+                }
+            }
+
+            // Extract channel information
+            const channelElement = contextRenderer.querySelector('.compact-media-item-byline, .media-item-byline, .ytm-video-description-byline, [href*="/channel/"], [href*="/@"]');
+            if (channelElement) {
+                metadata.channel = channelElement.textContent?.trim() || '';
+                console.log('👤 Channel found:', metadata.channel);
+            }
+
+            // Extract additional metadata
+            const metadataElements = contextRenderer.querySelectorAll('.compact-media-item-metadata, .media-item-metadata, .ytm-video-meta');
+            metadataElements.forEach(element => {
+                const text = element.textContent?.trim();
+                if (text && !metadata.description) {
+                    metadata.description = text;
+                }
+            });
+
+            // Extract description from context if available
+            const descriptionElement = contextRenderer.querySelector('[class*="description"], [class*="snippet"]');
+            if (descriptionElement && !metadata.description) {
+                metadata.description = descriptionElement.textContent?.trim() || '';
+            }
+
+            // Clean and validate
+            metadata.title = metadata.title.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            metadata.channel = metadata.channel.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            metadata.description = metadata.description.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+
+            console.log('📊 Context renderer metadata:', {
+                title: metadata.title,
+                channel: metadata.channel,
+                description: metadata.description.substring(0, 100) + '...'
+            });
+
+        } catch (error) {
+            console.error('Error extracting from context renderer:', error);
+        }
+
         return metadata;
     }
 
     async classifyVideo(metadata) {
-        // Enhanced text extraction for classification including channel info
-        const text = `${metadata.title} ${metadata.description} ${metadata.channel}`.toLowerCase();
+        const text = `${metadata.title} ${metadata.channel} ${metadata.description}`.toLowerCase();
         
-        console.log('🔍 Classifying video with enhanced metadata:', {
-            hasTitle: !!metadata.title,
-            hasDescription: !!metadata.description,
-            hasChannel: !!metadata.channel,
-            hasThumbnail: !!metadata.thumbnail,
-            fromContextRenderer: !!metadata.hasContextRenderer
-        });
-        
-        if (this.classifier) {
-            try {
-                // Use ML model for classification
+        try {
+            if (this.classifier) {
                 return await this.classifyWithML(text);
-            } catch (error) {
-                console.error('ML classification failed, using fallback:', error);
+            } else {
                 return this.classifyWithKeywords(text);
             }
-        } else {
-            // Use keyword-based classification
+        } catch (error) {
+            console.error('Error classifying video:', error);
             return this.classifyWithKeywords(text);
         }
     }
 
     async classifyWithML(text) {
         try {
-            if (this.transformersLoader) {
-                const result = await this.transformersLoader.classify(text);
-                if (result && result.length > 0) {
-                    // Map sentiment to categories (simplified approach)
-                    // In production, you'd use a model trained specifically for video categories
-                    const sentiment = result[0].label;
-                    const confidence = result[0].score;
-                    
-                    // For now, fall back to keyword classification with ML confidence boost
-                    const keywordCategory = this.classifyWithKeywords(text);
-                    
-                    // You could enhance this by training a custom model or using
-                    // a multi-label classification model for video categories
-                    return keywordCategory;
-                }
+            const result = await this.classifier(text);
+            if (result && result.length > 0) {
+                return result[0].label;
             }
         } catch (error) {
-            console.debug('ML classification failed:', error);
+            console.error('ML classification error:', error);
         }
         
         // Fallback to keyword classification
@@ -661,37 +776,27 @@ class YouTubeFilter {
 
     classifyWithKeywords(text) {
         let maxScore = 0;
-        let bestCategory = 'entertainment'; // default
-        let scoreDetails = {};
-
-        // Score each category based on keyword matches
-        for (const [category, keywords] of Object.entries(this.categoryKeywords)) {
+        let bestCategory = 'entertainment'; // Default category
+        
+        // Check each category for keyword matches
+        Object.keys(this.categoryKeywords).forEach(category => {
+            const keywords = this.categoryKeywords[category];
             let score = 0;
-            let matchedKeywords = [];
             
-            for (const keyword of keywords) {
-                if (text.includes(keyword)) {
-                    const keywordScore = keyword.split(' ').length; // Multi-word keywords get higher scores
-                    score += keywordScore;
-                    matchedKeywords.push(keyword);
+            keywords.forEach(keyword => {
+                if (text.includes(keyword.toLowerCase())) {
+                    // Weight longer keywords more heavily
+                    score += keyword.length;
                 }
-            }
-            
-            scoreDetails[category] = { score, matchedKeywords };
+            });
             
             if (score > maxScore) {
                 maxScore = score;
                 bestCategory = category;
             }
-        }
-
-        console.log('🔍 Classification analysis:', {
-            text: text.substring(0, 100) + '...',
-            scores: scoreDetails,
-            result: bestCategory,
-            maxScore
         });
-
+        
+        console.log(`🎯 Keyword classification: ${bestCategory} (score: ${maxScore})`);
         return bestCategory;
     }
 
@@ -720,72 +825,85 @@ class YouTubeFilter {
     }
 
     applyFilterToVideo(videoElement, category) {
-        const shouldShow = this.settings.mode === 'show' 
-            ? this.settings.categories[category] 
-            : !this.settings.categories[category];
-
-        if (shouldShow) {
-            // Show video - remove filtered class and attributes
-            videoElement.classList.remove('ysf-filtered');
-            videoElement.removeAttribute('data-filter-message');
-            videoElement.removeAttribute('data-filter-category');
-            
-            // Also remove from nested containers
-            const nestedContainers = videoElement.querySelectorAll('.media-item-thumbnail-container, ytm-media-item');
-            nestedContainers.forEach(container => {
-                container.classList.remove('ysf-filtered');
-                container.removeAttribute('data-filter-message');
-                container.removeAttribute('data-filter-category');
-            });
-            
-            return false;
-        } else {
-            // Add filtered class and set overlay text
-            videoElement.classList.add('ysf-filtered');
-            videoElement.setAttribute('data-filter-message', 'FILTERED');
-            videoElement.setAttribute('data-filter-category', category.toUpperCase());
-            
-            // For ytm-video-with-context-renderer, ensure thumbnail container is properly blurred
-            const isContextRenderer = videoElement.tagName?.toLowerCase() === 'ytm-video-with-context-renderer';
-            
-            if (isContextRenderer) {
-                console.log('🎯 Applying enhanced filtering to ytm-video-with-context-renderer');
+        // Check if this filter should be applied based on the new settings structure
+        const shouldFilter = this.shouldFilterCategory(category);
+        
+        // Find the specific #content element with the required classes
+        const contentElement = videoElement.querySelector('#content.style-scope.ytd-rich-item-renderer');
+        
+        if (!shouldFilter) {
+            // Show video - remove filtered class and overlay
+            if (contentElement) {
+                contentElement.classList.remove('ysf-filtered');
+                contentElement.removeAttribute('data-filter-category');
                 
-                // Find and blur the thumbnail container specifically
-                const thumbnailContainer = videoElement.querySelector('.media-item-thumbnail-container');
-                if (thumbnailContainer) {
-                    thumbnailContainer.classList.add('ysf-filtered');
-                    thumbnailContainer.setAttribute('data-filter-message', 'FILTERED');
-                    thumbnailContainer.setAttribute('data-filter-category', category.toUpperCase());
-                    console.log('✅ Applied blur to media-item-thumbnail-container');
-                }
-                
-                // Also blur other key components within the context renderer
-                const mediaItem = videoElement.querySelector('ytm-media-item');
-                if (mediaItem) {
-                    mediaItem.classList.add('ysf-filtered');
-                    mediaItem.setAttribute('data-filter-message', 'FILTERED');
-                    mediaItem.setAttribute('data-filter-category', category.toUpperCase());
-                }
-                
-                // Blur the details section
-                const detailsSection = videoElement.querySelector('.details, .media-item-info, .compact-media-item-info');
-                if (detailsSection) {
-                    detailsSection.classList.add('ysf-filtered-details');
-                }
-            } else {
-                // Fallback for other video containers
-                const videoContainer = videoElement.querySelector('ytm-media-item') || 
-                                     videoElement.querySelector('.media-item-thumbnail-container');
-                if (videoContainer) {
-                    videoContainer.classList.add('ysf-filtered');
-                    videoContainer.setAttribute('data-filter-message', 'FILTERED');
-                    videoContainer.setAttribute('data-filter-category', category.toUpperCase());
+                // Remove any existing overlay
+                const existingOverlay = videoElement.querySelector('.ysf-category-overlay');
+                if (existingOverlay) {
+                    existingOverlay.remove();
                 }
             }
-            
-            return true;
+            return false;
+        } else {
+            // Filter video - add filtered class to the #content element
+            if (contentElement) {
+                contentElement.classList.add('ysf-filtered');
+                contentElement.setAttribute('data-filter-category', category.toUpperCase());
+                
+                // Create unblurred overlay element
+                let overlay = videoElement.querySelector('.ysf-category-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.className = 'ysf-category-overlay';
+                    videoElement.style.position = 'relative';
+                    videoElement.appendChild(overlay);
+                }
+                
+                overlay.textContent = category.toUpperCase();
+                overlay.setAttribute('data-category', category);
+                
+                console.log(`🎯 Applied blur filter to #content element for category: ${category}`);
+                return true;
+            } else {
+                console.log('❌ No #content.style-scope.ytd-rich-item-renderer element found');
+                return false;
+            }
         }
+    }
+
+    shouldFilterCategory(category) {
+        // Find which category group this filter belongs to
+        let isFilterSelected = false;
+        
+        Object.keys(this.settings).forEach(categoryGroup => {
+            if (typeof this.settings[categoryGroup] === 'object' && 
+                this.settings[categoryGroup][category] !== undefined) {
+                isFilterSelected = this.settings[categoryGroup][category];
+            }
+        });
+        
+        // Apply filter logic based on mode
+        if (this.settings.hideMode) {
+            // Hide mode: filter (hide) selected categories
+            return isFilterSelected;
+        } else {
+            // Show mode: show only selected categories (filter everything else)
+            // If no filters are selected, show everything
+            const hasAnyFiltersSelected = this.hasAnyFiltersSelected();
+            if (!hasAnyFiltersSelected) {
+                return false; // Show everything if no filters are selected
+            }
+            return !isFilterSelected; // Filter (hide) unselected categories
+        }
+    }
+
+    hasAnyFiltersSelected() {
+        return Object.keys(this.settings).some(categoryGroup => {
+            if (typeof this.settings[categoryGroup] === 'object') {
+                return Object.values(this.settings[categoryGroup]).some(value => value === true);
+            }
+            return false;
+        });
     }
 
     updateStats() {
@@ -825,6 +943,7 @@ class YouTubeFilterInitializer {
         this.setupDelayedInit();
         this.setupNavigationListener();
         this.setupPeriodicCheck();
+        this.setupPageLoadListener();
     }
     
     setupImmediateInit() {
@@ -840,7 +959,7 @@ class YouTubeFilterInitializer {
                 console.log('🔄 Attempting delayed initialization...');
                 this.tryInitialize('delayed');
             }
-        }, 2000);
+        }, 1000);
         
         // Additional delays for slower connections
         setTimeout(() => {
@@ -848,7 +967,15 @@ class YouTubeFilterInitializer {
                 console.log('🔄 Attempting extended delay initialization...');
                 this.tryInitialize('extended-delay');
             }
-        }, 5000);
+        }, 3000);
+
+        // More aggressive retry for page reloads
+        setTimeout(() => {
+            if (!this.initialized) {
+                console.log('🔄 Attempting final initialization attempt...');
+                this.tryInitialize('final-attempt');
+            }
+        }, 8000);
     }
     
     setupNavigationListener() {
@@ -862,8 +989,8 @@ class YouTubeFilterInitializer {
                 console.log('🔄 YouTube navigation detected:', currentUrl);
                 
                 // Re-initialize after navigation with delay
-                setTimeout(() => {
-                    this.tryInitialize('navigation');
+                setTimeout(async () => {
+                    await this.tryInitialize('navigation');
                 }, 1500);
             }
         };
@@ -884,136 +1011,115 @@ class YouTubeFilterInitializer {
         // Listen for popstate events
         window.addEventListener('popstate', () => {
             console.log('🔄 Popstate navigation detected');
-            setTimeout(() => {
-                this.tryInitialize('popstate');
+            setTimeout(async () => {
+                await this.tryInitialize('popstate');
             }, 1000);
         });
     }
     
+    setupPageLoadListener() {
+        // Listen for page load events
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('🔄 DOMContentLoaded detected');
+                setTimeout(() => this.tryInitialize('dom-loaded'), 500);
+            });
+        }
+
+        window.addEventListener('load', () => {
+            console.log('🔄 Window load detected');
+            setTimeout(() => this.tryInitialize('window-loaded'), 1000);
+        });
+
+        // Also listen for YouTube-specific events
+        document.addEventListener('yt-navigate-finish', () => {
+            console.log('🔄 YouTube navigation finish detected');
+            setTimeout(() => this.tryInitialize('yt-navigate'), 500);
+        });
+    }
+
     setupPeriodicCheck() {
         // Periodic check to ensure the filter stays active
         setInterval(() => {
             if (this.initialized && this.filter) {
                 // Check if we're still on YouTube and the filter is working
-                if (location.href.includes('youtube.com')) {
-                    // Verify the filter is still active by checking for processed videos
-                    const processedVideos = document.querySelectorAll('[data-filter-category]');
-                    if (processedVideos.length === 0 && document.querySelectorAll('ytm-video-with-context-renderer, ytd-video-renderer').length > 0) {
-                        console.log('⚠️ Filter appears inactive, re-initializing...');
-                        this.tryInitialize('periodic-check');
+                if (location.hostname === 'www.youtube.com' || location.hostname === 'm.youtube.com') {
+                    const videos = document.querySelectorAll('[data-filter-category]');
+                    if (videos.length === 0) {
+                        console.log('🔄 No classified videos found, re-processing...');
+                        this.filter.processExistingVideos().then(() => {
+                            this.filter.applyFilters();
+                        });
                     }
                 }
-            } else if (location.href.includes('youtube.com')) {
-                console.log('⚠️ Filter not initialized, attempting restart...');
-                this.tryInitialize('periodic-restart');
+            } else if (!this.initialized) {
+                this.tryInitialize('periodic-check');
             }
-        }, 15000); // Check every 15 seconds
+        }, 15000); // Check every 15 seconds (more frequent)
     }
     
     async tryInitialize(source) {
+        if (this.initialized) {
+            return;
+        }
+        
         try {
-            console.log(`🎯 Initializing YouTube Filter (source: ${source}, attempt: ${this.initRetries + 1})`);
+            console.log(`🔄 Initializing filter (${source})...`);
             
             // Check if we're on YouTube
-            if (!location.href.includes('youtube.com')) {
+            if (!location.hostname.includes('youtube.com')) {
                 console.log('❌ Not on YouTube, skipping initialization');
-                return false;
+                return;
             }
             
-            // Detect if we're on mobile or desktop YouTube
-            const isMobile = location.href.includes('m.youtube.com') || 
-                           window.innerWidth < 768 || 
-                           /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
-            
-            console.log(`📱 Detected ${isMobile ? 'mobile' : 'desktop'} YouTube`);
-            
-            // Check if YouTube content is ready with appropriate selectors
-            const youtubeAppSelectors = isMobile 
-                ? ['#page-manager', '#app', '.mobile-web-app', 'body[class*="mobile"]', '#content']
-                : ['ytd-app', '#container', 'ytd-page-manager', '#content'];
-            
-            let youtubeApp = null;
-            for (const selector of youtubeAppSelectors) {
-                youtubeApp = document.querySelector(selector);
-                if (youtubeApp) {
-                    console.log(`✅ Found YouTube app with selector: ${selector}`);
-                    break;
-                }
-            }
-            
-            if (!youtubeApp) {
-                // Check if we have basic video content
-                const hasVideoContent = document.querySelectorAll('ytm-video-with-context-renderer, ytd-video-renderer, .compact-media-item, .video-list-item').length > 0;
-                
-                if (!hasVideoContent && this.initRetries < 5) {
-                    console.log('⏳ YouTube app not ready, will retry...');
+            // Check if DOM is ready
+            if (document.readyState === 'loading') {
+                console.log('⏳ DOM still loading, waiting...');
+                if (this.initRetries < this.maxRetries) {
                     this.scheduleRetry(source);
-                    return false;
-                } else {
-                    console.log('🔄 No app container found, but proceeding with available content...');
                 }
+                return;
             }
             
-            // Initialize or re-initialize the filter
-            if (this.filter) {
-                console.log('🔄 Stopping existing filter...');
-                if (this.filter.observer) {
-                    this.filter.observer.disconnect();
+            // Check for basic YouTube elements
+            const youtubeElements = document.querySelectorAll('ytd-app, ytm-app, #app, #content');
+            if (youtubeElements.length === 0) {
+                console.log('⏳ YouTube app not ready, waiting...');
+                if (this.initRetries < this.maxRetries) {
+                    this.scheduleRetry(source);
                 }
+                return;
             }
             
-            // Create new filter instance
+            // Initialize the filter
             this.filter = new YouTubeFilter();
             this.initialized = true;
             this.initRetries = 0;
             
-            console.log('✅ YouTube Filter initialized successfully!');
-            
-            // Give it a moment to settle, then process videos
-            setTimeout(async () => {
-                if (this.filter) {
-                    console.log('🔄 Running initial video processing...');
-                    await this.filter.processExistingVideos();
-                    await this.filter.applyFilters();
-                }
-            }, 1000);
-            
-            return true;
+            console.log(`✅ YouTube Filter initialized successfully via ${source}`);
             
         } catch (error) {
-            console.error('❌ Failed to initialize YouTube Filter:', error);
-            this.scheduleRetry(source);
-            return false;
+            console.error(`❌ Initialization failed (${source}):`, error);
+            
+            if (this.initRetries < this.maxRetries) {
+                this.scheduleRetry(source);
+            } else {
+                console.error('❌ Max initialization retries reached');
+            }
         }
     }
     
     scheduleRetry(source) {
         this.initRetries++;
+        console.log(`🔄 Scheduling retry ${this.initRetries}/${this.maxRetries} for ${source}...`);
         
-        if (this.initRetries < this.maxRetries) {
-            const delay = this.retryDelay * Math.min(this.initRetries, 5); // Cap delay growth
-            console.log(`⏳ Retrying initialization in ${delay}ms (${this.initRetries}/${this.maxRetries})`);
-            
-            setTimeout(() => {
-                this.tryInitialize(`${source}-retry-${this.initRetries}`);
-            }, delay);
-        } else {
-            console.log('❌ Max retries reached, giving up on initialization');
-            this.initRetries = 0; // Reset for future attempts
-        }
+        setTimeout(() => {
+            this.tryInitialize(`${source}-retry-${this.initRetries}`);
+        }, this.retryDelay);
     }
 }
 
-// Start the enhanced initialization system
-console.log('🎬 YouTube Smart Filter loading...');
+// Start the initialization process
+new YouTubeFilterInitializer();
 
-// Initialize immediately if document is ready, otherwise wait
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        new YouTubeFilterInitializer();
-    });
-} else {
-    new YouTubeFilterInitializer();
-}
-
-} // Close the global if statement to prevent duplicate loading 
+} 
