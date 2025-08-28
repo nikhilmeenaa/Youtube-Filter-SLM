@@ -181,22 +181,19 @@ class YouTubeFilter {
         this.sendMessage({ type: 'MODEL_STATUS', status: 'loading' });
         
         try {
-            // Initialize the transformers loader
-            if (!this.transformersLoader) {
-                this.transformersLoader = new window.TransformersLoader();
+            // Initialize the enhanced classifier
+            if (!this.enhancedClassifier) {
+                this.enhancedClassifier = new window.EnhancedContentClassifier();
             }
             
-            // Try to initialize the ML pipeline
-            this.classifier = await this.transformersLoader.initialize();
+            // Initialize the enhanced classifier
+            await this.enhancedClassifier.initialize();
             
-            if (this.classifier) {
-                console.log('✅ AI model loaded successfully');
-                this.sendMessage({ type: 'MODEL_STATUS', status: 'ready' });
-            } else {
-                throw new Error('AI model not available');
-            }
+            console.log('✅ Enhanced classifier loaded successfully');
+            this.sendMessage({ type: 'MODEL_STATUS', status: 'ready' });
+            
         } catch (error) {
-            console.log('🔄 AI model not available, using keyword-based classification');
+            console.log('🔄 Enhanced classifier not available, using fallback classification');
             // Fallback to rule-based classification
             this.initializeFallbackClassifier();
             this.sendMessage({ type: 'MODEL_STATUS', status: 'ready' });
@@ -749,8 +746,8 @@ class YouTubeFilter {
         const text = `${metadata.title} ${metadata.channel} ${metadata.description}`.toLowerCase();
         
         try {
-            if (this.classifier) {
-                return await this.classifyWithML(text);
+            if (this.enhancedClassifier) {
+                return await this.classifyWithEnhanced(text, metadata);
             } else {
                 return this.classifyWithKeywords(text);
             }
@@ -760,14 +757,15 @@ class YouTubeFilter {
         }
     }
 
-    async classifyWithML(text) {
+    async classifyWithEnhanced(text, metadata) {
         try {
-            const result = await this.classifier(text);
-            if (result && result.length > 0) {
-                return result[0].label;
+            const result = await this.enhancedClassifier.classifyContent(text, metadata);
+            if (result && result.primary) {
+                console.log(`🎯 Enhanced classification: ${result.primary} (confidence: ${result.confidence.toFixed(2)})`);
+                return result.primary;
             }
         } catch (error) {
-            console.error('ML classification error:', error);
+            console.error('Enhanced classification error:', error);
         }
         
         // Fallback to keyword classification
