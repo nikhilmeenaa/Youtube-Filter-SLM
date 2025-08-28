@@ -181,7 +181,7 @@ class YouTubeFilter {
         this.sendMessage({ type: 'MODEL_STATUS', status: 'loading' });
         
         try {
-            // Initialize the transformers loader
+            // Initialize the transformers loader with real ML models
             if (!this.transformersLoader) {
                 this.transformersLoader = new window.TransformersLoader();
             }
@@ -190,14 +190,14 @@ class YouTubeFilter {
             this.classifier = await this.transformersLoader.initialize();
             
             if (this.classifier) {
-                console.log('✅ AI model loaded successfully');
+                console.log('✅ ML models (DistilBERT, BERT, RoBERTa) loaded successfully');
                 this.sendMessage({ type: 'MODEL_STATUS', status: 'ready' });
             } else {
-                throw new Error('AI model not available');
+                throw new Error('ML models not available');
             }
         } catch (error) {
-            console.log('🔄 AI model not available, using keyword-based classification');
-            // Fallback to rule-based classification
+            console.log('🔄 ML models not available, using enhanced keyword classification');
+            // Fallback to enhanced keyword classification
             this.initializeFallbackClassifier();
             this.sendMessage({ type: 'MODEL_STATUS', status: 'ready' });
         }
@@ -764,7 +764,9 @@ class YouTubeFilter {
         try {
             const result = await this.classifier(text);
             if (result && result.length > 0) {
-                return result[0].label;
+                const classification = result[0];
+                console.log(`🎯 ML classification: ${classification.label} (confidence: ${classification.confidence.toFixed(2)}, model: ${classification.model})`);
+                return classification.label;
             }
         } catch (error) {
             console.error('ML classification error:', error);
