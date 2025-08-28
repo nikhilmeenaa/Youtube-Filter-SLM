@@ -82,7 +82,7 @@ class EnhancedContentClassifier {
         // Enhanced topic classification with better patterns
         return {
             classify: (text) => {
-                const topics = this.enhancedTopicClassification(text);
+                const topics = this.patternBasedClassification(text);
                 return topics.sort((a, b) => b.confidence - a.confidence);
             }
         };
